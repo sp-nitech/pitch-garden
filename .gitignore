@@ -1,0 +1,21 @@
+# project
+.venv/
+dist/
+
+# docs
+build/
+
+# examples
+examples/*/downloads
+examples/*/exp/
+
+# tools
+tools/**/
+
+# misc
+__pycache__/
+*.pyc
+*~
+*.swp
+\#*#
+.\#*

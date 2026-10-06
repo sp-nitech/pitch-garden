@@ -11,29 +11,28 @@ The outputs of all trackers are aligned on a common frame grid, so that they can
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.12+
 
 ## Installation
 
 ```sh
 pip install "pitch-garden[all]"  # All trackers
 
-# To install only some of the trackers, use one of the following instead.
-# pip install "pitch-garden[dsp]"  # Trackers based on signal processing
-# pip install "pitch-garden[nn]"   # Trackers based on neural networks
+# To avoid installing PyTorch, use the following instead.
+# pip install "pitch-garden[lite]"  # Trackers not requiring PyTorch
 ```
 
 ## Supported Algorithms
 
-| Name | Neural Network | Min F0 [Hz] | Max F0 [Hz] | Paper | Source |
-| :--- | :---: | ---: | ---: | :---: | :---: |
-| `dio` | | 10 | Nyquist | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
-| `harvest` | | 10 | Nyquist | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
-| `rapt` | | 10 | Nyquist | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
-| `reaper` | | 10 | Nyquist | | [GitHub](https://github.com/google/reaper) |
-| `straight` | | 40 | Nyquist | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/HidekiKawahara/legacy_STRAIGHT) |
-| `swift-f0` | ✓ | 46.875 | 2093.75 | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
-| `swipe` | | 10 | Nyquist | [EDU](https://scholarsmine.mst.edu/cgi/viewcontent.cgi?article=8070&context=ele_comeng_facwork) | [GitHub](https://github.com/kylebgorman/swipe) |
+| Name | Neural | F0 Range [Hz] | Voicing Threshold | Paper | Source |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `dio` | | 10–Nyquist | [0.02, 0.2] | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
+| `harvest` | | 10–Nyquist | [0.0, 0.2] | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
+| `rapt` | | 10–Nyquist | [-0.6, 0.7] | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
+| `reaper` | | 10–Nyquist | [-0.5, 1.6] | | [GitHub](https://github.com/google/reaper) |
+| `straight` | | 40–Nyquist | | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/HidekiKawahara/legacy_STRAIGHT) |
+| `swift-f0` | ✓ | 46.875–2093.75 | [0.0, 1.0] | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
+| `swipe` | | 10–Nyquist | [0.2, 0.5] | [EDU](https://scholarsmine.mst.edu/cgi/viewcontent.cgi?article=8070&context=ele_comeng_facwork) | [GitHub](https://github.com/kylebgorman/swipe) |
 
 `dio`, `harvest`, `rapt`, `reaper`, and `swipe` are based on the implementations in [SPTK](https://github.com/sp-nitech/SPTK), and their outputs are compatible with the `pitch` command of SPTK.
 `straight` is based on [pylstraight](https://github.com/takenori-y/pylstraight), a Python port of Legacy STRAIGHT.
@@ -69,7 +68,7 @@ pitch = tracker(waveform, sample_rate)
 ### Single algorithm
 
 A `Tracker` holds an algorithm and its own parameters.
-The meaning and the valid range of `voicing_threshold` differ among the algorithms, e.g., a higher value gives fewer voiced frames in `rapt` but more in `reaper`.
+The meaning and the recommended range of `voicing_threshold` differ among the algorithms, e.g., a higher value gives more voiced frames in `rapt` but fewer in `swipe`.
 The output `Pitch` holds the F0 in Hz on a uniform frame grid regardless of the native frame period of the algorithm, and converts it to other formats on demand.
 
 ```python

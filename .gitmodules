@@ -1,0 +1,3 @@
+[submodule "bindings/sptk/third_party/SPTK"]
+    path = bindings/sptk/third_party/SPTK
+    url = https://github.com/sp-nitech/SPTK.git
