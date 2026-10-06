@@ -1,0 +1,219 @@
+# pitch-garden
+
+*pitch-garden* provides a unified interface to various pitch (F0) trackers and integrates their outputs by voting.
+The outputs of all trackers are aligned on a common frame grid, so that they can be directly compared and voted.
+
+## Features
+
+- Voting of multiple trackers
+- Two-pass tracking with an F0 search range estimated from the first pass
+- Parallel execution of the trackers
+
+## Requirements
+
+- Python 3.10+
+
+## Installation
+
+```sh
+pip install "pitch-garden[all]"  # All trackers
+
+# To install only some of the trackers, use one of the following instead.
+# pip install "pitch-garden[dsp]"  # Trackers based on signal processing
+# pip install "pitch-garden[nn]"   # Trackers based on neural networks
+```
+
+## Supported Algorithms
+
+| Name | Neural Network | Min F0 [Hz] | Max F0 [Hz] | Paper | Source |
+| :--- | :---: | ---: | ---: | :---: | :---: |
+| `dio` | | 10 | Nyquist | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
+| `harvest` | | 10 | Nyquist | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
+| `rapt` | | 10 | Nyquist | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
+| `reaper` | | 10 | Nyquist | | [GitHub](https://github.com/google/reaper) |
+| `straight` | | 40 | Nyquist | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/HidekiKawahara/legacy_STRAIGHT) |
+| `swift-f0` | ✓ | 46.875 | 2093.75 | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
+| `swipe` | | 10 | Nyquist | [EDU](https://scholarsmine.mst.edu/cgi/viewcontent.cgi?article=8070&context=ele_comeng_facwork) | [GitHub](https://github.com/kylebgorman/swipe) |
+
+`dio`, `harvest`, `rapt`, `reaper`, and `swipe` are based on the implementations in [SPTK](https://github.com/sp-nitech/SPTK), and their outputs are compatible with the `pitch` command of SPTK.
+`straight` is based on [pylstraight](https://github.com/takenori-y/pylstraight), a Python port of Legacy STRAIGHT.
+
+## Usage
+
+### Input preparation
+
+Audio files, headerless raw files, and NumPy arrays are accepted.
+
+```python
+import numpy as np
+
+import pitch_garden as pg
+
+tracker = pg.Tracker("swift-f0")
+
+# An audio file readable by soundfile, where multiple channels are averaged.
+audio = pg.load_audio("speech.wav")
+pitch = tracker(audio)
+
+# A headerless raw file with a data type of SPTK x2x, e.g., 16-bit integers.
+raw = pg.RawFormat(sample_rate=16000, data_type="s", num_channels=1)
+audio = pg.load_audio("speech.raw", raw)
+pitch = tracker(audio)
+
+# A NumPy array with its sample rate.
+sample_rate = 16000
+waveform = np.sin(2 * np.pi * 220 * np.arange(sample_rate) / sample_rate)
+pitch = tracker(waveform, sample_rate)
+```
+
+### 1. Single algorithm
+
+A `Tracker` holds an algorithm and its own parameters.
+The output `Pitch` holds the F0 in Hz on a uniform frame grid regardless of the native frame period of the algorithm, and converts it to other formats on demand.
+
+```python
+import pitch_garden as pg
+
+audio = pg.load_audio("speech.wav")
+
+tracker = pg.Tracker("swift-f0", voicing_threshold=0.5, fmin=60.0, fmax=800.0)
+pitch = tracker(audio, frame_period=5.0)
+print(pitch)
+# Pitch(source='swift-f0', num_frames=100, num_voiced_frames=..., ...)
+print(pitch.f0)  # The F0 in Hz as a NumPy array, where unvoiced frames are 0.
+
+# The F0 is converted to a NumPy array of another format.
+lf0 = pitch.to("log")  # log F0 (unvoiced: -1e10)
+period = pitch.to("inverse")  # Fs/F0 in samples (unvoiced: 0)
+
+# The F0 is converted and saved; the pitch object itself is unchanged.
+pitch.tofile("speech.lf0", output_format="log", file_type="double")
+
+# The voicing threshold can be changed without re-extraction if the tracker
+# provides the voicing score. Otherwise, extract again with tracker.replace(...).
+strict = pitch.with_threshold(0.8)
+```
+
+### 2. Multiple algorithms and voting
+
+A `Pipeline` runs the trackers in parallel where possible and votes their outputs.
+The same algorithm can be used with different parameters by giving different names.
+The median voter is compatible with `medfilt -w 1 -magic` of SPTK.
+
+```python
+import pitch_garden as pg
+
+audio = pg.load_audio("speech.wav")
+
+trackers = [
+    pg.Tracker("swift-f0"),
+    pg.Tracker("swift-f0", name="swift-f0@strict", voicing_threshold=0.8),
+]
+with pg.Pipeline(trackers, voter="median") as pipeline:
+    result = pipeline(audio, frame_period=5.0)
+
+# The final contour voted from the trackers as a Pitch object
+print(result.pitch)
+# Pitch(source='median', num_frames=100, num_voiced_frames=..., ...)
+
+# The outputs of the trackers as Pitch objects keyed by the tracker names
+for name, pitch in result.each.items():
+    print(name, pitch)
+# swift-f0 Pitch(source='swift-f0', num_frames=100, ...)
+# swift-f0@strict Pitch(source='swift-f0@strict', num_frames=100, ...)
+```
+
+If a tracker fails, e.g., on very short audio, it is excluded from voting with a
+warning and its error message is kept in `result.errors`.
+Give `on_error="raise"` to `Pipeline` to raise the error instead.
+
+### 3. Two-pass tracking
+
+If the F0 range of the speaker is unknown, the trackers are first run with a wide search range, and then rerun with the range estimated from the distribution of the F0 of the first pass.
+This works with a single tracker as well as multiple ones, where the estimated range is shared by all trackers.
+Each algorithm has its recommended settings chosen in [examples/pitch_benchmark](examples/pitch_benchmark), i.e., whether it is rerun and which pass gives the voicing decisions, which can be overridden by `two_pass_policy` of each tracker.
+
+```python
+import pitch_garden as pg
+from pitch_garden.ranges.log_normal import LogNormalRangeEstimator
+
+audio = pg.load_audio("speech.wav")
+
+two_pass = pg.TwoPass(estimator=LogNormalRangeEstimator(), fmin=40.0, fmax=2000.0)
+with pg.Pipeline([pg.Tracker("rapt")], two_pass=two_pass) as pipeline:
+    result = pipeline(audio)
+
+# The estimated range
+print(result.f0_range)
+# F0Range(fmin=111.96..., fmax=224.08..., num_voiced_frames=..., ...)
+
+# The final contour of the second pass, i.e., the output of the single tracker
+print(result.pitch)
+# Pitch(source='rapt', num_frames=100, num_voiced_frames=..., ...)
+
+# The result of the first pass, which is of the same type as the final result
+print(result.pass1.pitch)
+# Pitch(source='rapt', num_frames=100, num_voiced_frames=..., ...)
+
+# Rerun a tracker not recommended to be rerun, taking the voicing from the first pass
+policy = pg.TwoPassPolicy(enabled=True, voicing_from="1st")
+tracker = pg.Tracker("swipe", two_pass_policy=policy)
+with pg.Pipeline([tracker], two_pass=two_pass) as pipeline:
+    result = pipeline(audio)
+```
+
+### Command-line interface
+
+The settings are given by a YAML file, and the input and the output directory are given by the command line.
+The input is an audio file, a directory searched recursively, or a text file listing audio files line by line.
+See [configs/basic.yaml](configs/basic.yaml) and [configs/two_pass.yaml](configs/two_pass.yaml) for all settings.
+
+```sh
+pitch-garden configs/basic.yaml data/wav -o exp/f0
+```
+
+The main settings for the above use cases are as follows:
+
+```yaml
+trackers:
+  - algorithm: swift-f0
+  - algorithm: swift-f0
+    name: swift-f0@strict
+    params: {voicing_threshold: 0.8}
+voter:
+  type: median
+
+two_pass:
+  scope: group # The unit to estimate the range: utterance, group, or global.
+  group_by: {type: dirname, level: 1}
+```
+
+With `scope: group`, the range is estimated for each group of files, e.g., each speaker.
+The groups are defined by `group_by` in either of the following ways:
+
+- `{type: dirname, level: 1}` groups the files by their directory `level` levels above, where `level: 1` is the directory containing the files.
+  For example, the files below are grouped into `spk1` and `spk2` with `level: 1`, and into a single group `data/wav` with `level: 2`.
+
+  ```
+  data/wav/spk1/a.wav
+  data/wav/spk1/b.wav
+  data/wav/spk2/c.wav
+  ```
+
+- `{type: map, path: data/speaker.map}` groups the files by a text file, where each line is the file name without the extension followed by the group name.
+
+  ```
+  a spk1
+  b spk1
+  c spk2
+  ```
+
+With `scope: utterance` and `scope: global`, the range is estimated for each file and for all files, respectively.
+
+The final contours are saved under `<output_dir>/pitch`, which are the voted ones for multiple trackers.
+For multiple trackers, their outputs are also saved under `<output_dir>/trackers/<name>` if `save_each` is enabled or voting is disabled.
+For the two-pass tracking, the estimated ranges are saved in `<output_dir>/f0_range.yaml`.
+
+## License
+
+This software is released under the MIT License.
