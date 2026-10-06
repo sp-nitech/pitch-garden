@@ -49,7 +49,7 @@ import numpy as np
 
 import pitch_garden as pg
 
-tracker = pg.Tracker("swift-f0")
+tracker = pg.Tracker("rapt")
 
 # An audio file readable by soundfile, where multiple channels are averaged.
 audio = pg.load_audio("speech.wav")
@@ -66,9 +66,10 @@ waveform = np.sin(2 * np.pi * 220 * np.arange(sample_rate) / sample_rate)
 pitch = tracker(waveform, sample_rate)
 ```
 
-### 1. Single algorithm
+### Single algorithm
 
 A `Tracker` holds an algorithm and its own parameters.
+The meaning and the valid range of `voicing_threshold` differ among the algorithms, e.g., a higher value gives fewer voiced frames in `rapt` but more in `reaper`.
 The output `Pitch` holds the F0 in Hz on a uniform frame grid regardless of the native frame period of the algorithm, and converts it to other formats on demand.
 
 ```python
@@ -76,10 +77,10 @@ import pitch_garden as pg
 
 audio = pg.load_audio("speech.wav")
 
-tracker = pg.Tracker("swift-f0", voicing_threshold=0.5, fmin=60.0, fmax=800.0)
+tracker = pg.Tracker("rapt", voicing_threshold=0.0, fmin=60.0, fmax=800.0)
 pitch = tracker(audio, frame_period=5.0)
 print(pitch)
-# Pitch(source='swift-f0', num_frames=100, num_voiced_frames=..., ...)
+# Pitch(source='rapt', num_frames=100, num_voiced_frames=..., ...)
 print(pitch.f0)  # The F0 in Hz as a NumPy array, where unvoiced frames are 0.
 
 # The F0 is converted to a NumPy array of another format.
@@ -88,13 +89,9 @@ period = pitch.to("inverse")  # Fs/F0 in samples (unvoiced: 0)
 
 # The F0 is converted and saved; the pitch object itself is unchanged.
 pitch.tofile("speech.lf0", output_format="log", file_type="double")
-
-# The voicing threshold can be changed without re-extraction if the tracker
-# provides the voicing score. Otherwise, extract again with tracker.replace(...).
-strict = pitch.with_threshold(0.8)
 ```
 
-### 2. Multiple algorithms and voting
+### Multiple algorithms and voting
 
 A `Pipeline` runs the trackers in parallel where possible and votes their outputs.
 The same algorithm can be used with different parameters by giving different names.
@@ -105,10 +102,7 @@ import pitch_garden as pg
 
 audio = pg.load_audio("speech.wav")
 
-trackers = [
-    pg.Tracker("swift-f0"),
-    pg.Tracker("swift-f0", name="swift-f0@strict", voicing_threshold=0.8),
-]
+trackers = [pg.Tracker("rapt"), pg.Tracker("swift-f0")]
 with pg.Pipeline(trackers, voter="median") as pipeline:
     result = pipeline(audio, frame_period=5.0)
 
@@ -119,15 +113,15 @@ print(result.pitch)
 # The outputs of the trackers as Pitch objects keyed by the tracker names
 for name, pitch in result.each.items():
     print(name, pitch)
+# rapt Pitch(source='rapt', num_frames=100, ...)
 # swift-f0 Pitch(source='swift-f0', num_frames=100, ...)
-# swift-f0@strict Pitch(source='swift-f0@strict', num_frames=100, ...)
 ```
 
 If a tracker fails, e.g., on very short audio, it is excluded from voting with a
 warning and its error message is kept in `result.errors`.
 Give `on_error="raise"` to `Pipeline` to raise the error instead.
 
-### 3. Two-pass tracking
+### Two-pass tracking
 
 If the F0 range of the speaker is unknown, the trackers are first run with a wide search range, and then rerun with the range estimated from the distribution of the F0 of the first pass.
 This works with a single tracker as well as multiple ones, where the estimated range is shared by all trackers.
@@ -154,12 +148,6 @@ print(result.pitch)
 # The result of the first pass, which is of the same type as the final result
 print(result.pass1.pitch)
 # Pitch(source='rapt', num_frames=100, num_voiced_frames=..., ...)
-
-# Rerun a tracker not recommended to be rerun, taking the voicing from the first pass
-policy = pg.TwoPassPolicy(enabled=True, voicing_from="1st")
-tracker = pg.Tracker("swipe", two_pass_policy=policy)
-with pg.Pipeline([tracker], two_pass=two_pass) as pipeline:
-    result = pipeline(audio)
 ```
 
 ### Command-line interface
@@ -176,10 +164,8 @@ The main settings for the above use cases are as follows:
 
 ```yaml
 trackers:
+  - algorithm: rapt
   - algorithm: swift-f0
-  - algorithm: swift-f0
-    name: swift-f0@strict
-    params: {voicing_threshold: 0.8}
 voter:
   type: median
 
