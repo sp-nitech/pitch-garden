@@ -9,10 +9,11 @@ import sys
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import numpy as np
 
+from ..algorithms.base import VoicingSource
 from ..ranges._utils import clip_to_range, estimate_f0_range
 from ..ranges.base import BaseRangeEstimator, F0Range
 from ..ranges.log_normal import LogNormalRangeEstimator
@@ -26,7 +27,6 @@ from .types import Audio, Pitch
 logger = logging.getLogger("pitch_garden")
 
 OnError = Literal["skip", "raise"]
-ON_ERROR_OPTIONS: tuple[OnError, ...] = ("skip", "raise")
 
 # The trackers loaded in a worker process, keyed by their identities.
 _WORKER_CACHE: dict[str, Tracker] = {}
@@ -200,9 +200,10 @@ class Pipeline:
             )
         if num_workers is not None and num_workers < 1:
             raise ValueError("num_workers must be a positive integer.")
-        if on_error not in ON_ERROR_OPTIONS:
+        if on_error not in get_args(OnError):
             raise ValueError(
-                f"Invalid on_error '{on_error}'. Valid options are: {ON_ERROR_OPTIONS}"
+                f"Invalid on_error '{on_error}'. "
+                f"Valid options are: {list(get_args(OnError))}"
             )
 
         self.trackers = list(trackers)
@@ -578,7 +579,7 @@ class Pipeline:
         ]
 
     @staticmethod
-    def _merge_voicing(first: Pitch, second: Pitch, voicing: str) -> Pitch:
+    def _merge_voicing(first: Pitch, second: Pitch, voicing: VoicingSource) -> Pitch:
         """Take the voicing decisions from the first pass if requested."""
         if voicing == "2nd":
             return second

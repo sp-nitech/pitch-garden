@@ -19,6 +19,44 @@ from .types import Audio, NativeContour, Pitch
 _MIN_NATIVE_FRAMES = 4
 
 
+def _clip_range(
+    algo_cls: type[BaseAlgorithm], fmin: float | None, fmax: float | None
+) -> tuple[float, float]:
+    """Clip a search range by the limits of an algorithm.
+
+    Parameters
+    ----------
+    algo_cls : type[BaseAlgorithm]
+        The algorithm class.
+
+    fmin : float | None
+        The lower bound in Hz, or None for the lower limit of the algorithm.
+
+    fmax : float | None
+        The upper bound in Hz, or None for the upper limit of the algorithm.
+
+    Returns
+    -------
+    out : tuple[float, float]
+        The clipped range in Hz.
+
+    Raises
+    ------
+    ValueError
+        If the clipped range is empty.
+
+    """
+    lower, upper = algo_cls.get_f0_limits()
+    low = lower if fmin is None else max(lower, fmin)
+    high = upper if fmax is None else min(upper, fmax)
+    if high <= low:
+        raise ValueError(
+            f"Invalid F0 search range: fmin={low}, fmax={high}. "
+            f"The limits of {algo_cls.__name__} are {(lower, upper)}."
+        )
+    return low, high
+
+
 class Tracker:
     """A class for tracking pitch with an algorithm and its own parameters."""
 
@@ -116,23 +154,8 @@ class Tracker:
             raise ValueError(
                 f"{algo_cls.__name__} does not support the F0 search range."
             )
-        fmin, fmax = Tracker._resolve_f0_range(algo_cls, config)
-        if fmax <= fmin:
-            raise ValueError(
-                f"Invalid F0 search range: fmin={fmin}, fmax={fmax}. "
-                f"The limits of {algo_cls.__name__} are {algo_cls.get_f0_limits()}."
-            )
+        _clip_range(algo_cls, config.fmin, config.fmax)
         return config
-
-    @staticmethod
-    def _resolve_f0_range(
-        algo_cls: type[BaseAlgorithm], config: AlgorithmConfig
-    ) -> tuple[float, float]:
-        """Get the search range of the configuration clipped by the limits."""
-        lower, upper = algo_cls.get_f0_limits()
-        fmin = lower if config.fmin is None else max(lower, config.fmin)
-        fmax = upper if config.fmax is None else min(upper, config.fmax)
-        return fmin, fmax
 
     def __getstate__(self) -> dict[str, Any]:
         """Get the state for pickling without the loaded algorithm."""
@@ -192,7 +215,7 @@ class Tracker:
             The lower and upper bounds of the F0 search range in Hz.
 
         """
-        return self._resolve_f0_range(self.algorithm_class, self.config)
+        return _clip_range(self.algorithm_class, self.config.fmin, self.config.fmax)
 
     def _track(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
@@ -224,14 +247,7 @@ class Tracker:
             raise ValueError(
                 f"{self.algorithm_class.__name__} does not support the F0 search range."
             )
-        lower, upper = self.algorithm_class.get_f0_limits()
-        fmin, fmax = max(lower, f0_range[0]), min(upper, f0_range[1])
-        if fmax <= fmin:
-            raise ValueError(
-                f"Invalid F0 search range: fmin={fmin}, fmax={fmax}. "
-                f"The limits of {self.algorithm_class.__name__} are {(lower, upper)}."
-            )
-        return fmin, fmax
+        return _clip_range(self.algorithm_class, *f0_range)
 
     def replace(self, **params: Any) -> Tracker:
         """Create a new tracker with some parameters replaced.

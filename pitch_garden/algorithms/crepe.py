@@ -207,7 +207,7 @@ def decode_viterbi(probabilities: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     )
 
     value = log_emission[0] + np.log(1 / NUM_BINS + tiny)
-    pointers = np.zeros((num_frames, NUM_BINS), dtype=np.int64)
+    pointers = np.zeros((num_frames, NUM_BINS), dtype=np.int16)  # Saving memory.
     for t in range(1, num_frames):
         scores = value[predecessors] + log_transition
         best = np.argmax(scores, axis=0)

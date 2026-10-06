@@ -152,8 +152,8 @@ def _convert(value: Any, tp: Any, path: str) -> Any:
             raise ConfigError(f"{path}: must be a mapping.")
         return dict(value)
 
-    if dataclasses.is_dataclass(tp):
-        return _parse_dataclass(value, tp, path)  # type: ignore
+    if isinstance(tp, type) and dataclasses.is_dataclass(tp):
+        return _parse_dataclass(value, tp, path)
 
     if tp is Any:
         return value

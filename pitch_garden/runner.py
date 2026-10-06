@@ -13,6 +13,7 @@ import yaml
 
 from .config import Config, TwoPassSettings, build_pipeline
 from .interfaces.pipeline import PipelineResult
+from .interfaces.types import Pitch
 from .ranges.base import F0Range
 from .utils.io import load_audio
 
@@ -153,21 +154,25 @@ class _Writer:
         os.makedirs(output_dir, exist_ok=True)
         return os.path.join(output_dir, f"{_basename(input_file)}.{self.ext}")
 
-    def write(self, input_file: str, result: PipelineResult, prefix: str = "") -> None:
+    def _save(self, pitch: Pitch, path: str) -> None:
         output = self.config.output
-        kwargs = dict(
+        pitch.tofile(
+            path,
             output_format=output.format,
             file_type=output.file_type,
             sample_rate=output.sample_rate,
         )
+
+    def write(self, input_file: str, result: PipelineResult, prefix: str = "") -> None:
+        output = self.config.output
         if result.pitch is not None:
             path = self._path(os.path.join(prefix, "pitch"), input_file)
-            result.pitch.tofile(path, **kwargs)  # type: ignore
+            self._save(result.pitch, path)
         # The output of a single tracker is identical to the final contour.
         if len(result.each) > 1 and (output.save_each or result.pitch is None):
             for name, pitch in result.each.items():
                 path = self._path(os.path.join(prefix, "trackers", name), input_file)
-                pitch.tofile(path, **kwargs)  # type: ignore
+                self._save(pitch, path)
 
 
 def _iterate(

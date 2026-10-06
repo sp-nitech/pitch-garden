@@ -13,6 +13,7 @@ sha256="f4de960de53c1b8d069ade901b8145c0ccc311bd3760b613bd32474fa8b3a374"
 db=downloads/eval
 exp=exp
 nj=8
+device=cuda # The device of the neural trackers, e.g., cpu or cuda.
 
 # Download the eval set.
 if [ ! -d "$db" ]; then
@@ -31,7 +32,7 @@ extract() {
     for algorithm in $algorithms; do
         echo "Extracting F0 from $split with $algorithm under $setting..."
         python local/extract.py "$db" "$exp/$split" --algorithm "$algorithm" \
-            --setting "$setting" --split "$split" --num_workers "$nj"
+            --setting "$setting" --split "$split" --num_workers "$nj" --device "$device"
     done
 }
 
