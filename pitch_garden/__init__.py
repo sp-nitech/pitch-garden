@@ -1,10 +1,9 @@
 """A unified interface to various pitch trackers with ensemble voting."""
 
 from .algorithms.base import TwoPassPolicy
-from .interfaces.pipeline import Pipeline
+from .interfaces.pipeline import Pipeline, TwoPass
 from .interfaces.tracker import Tracker
 from .interfaces.types import Audio, Pitch
-from .ranges.two_pass import TwoPass
 from .utils.io import RawFormat, load_audio
 from .version import __version__
 

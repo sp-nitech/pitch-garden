@@ -23,7 +23,7 @@ if [ ! -d "$db" ]; then
     rm downloads/eval.tar
 fi
 
-algorithms="swift-f0 rapt swipe reaper dio harvest straight"
+algorithms="swift-f0 crepe rapt swipe reaper dio harvest straight"
 
 extract() {
     local split=$1

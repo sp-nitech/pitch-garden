@@ -4,15 +4,18 @@ MODULE  :=
 
 PYTHON_VERSION := 3.12
 
+# The build of PyTorch: gpu or cpu.
+TORCH := gpu
+
 UV_RUN := uv run --no-sync
 
 setup:
 	git submodule update --init
-	uv sync --locked --all-extras --python $(PYTHON_VERSION)
+	uv sync --locked --all-extras --group $(TORCH) --python $(PYTHON_VERSION)
 
 update:
 	uv lock --upgrade
-	uv sync --locked --all-extras --python $(PYTHON_VERSION)
+	uv sync --locked --all-extras --group $(TORCH) --python $(PYTHON_VERSION)
 
 dist:
 	uv build
@@ -45,7 +48,7 @@ format: tool
 	./tools/yamlfmt/yamlfmt .yamlfmt.yml .github/workflows/*.yml configs/*.yaml
 
 test:
-	[ -n "$(MODULE)" ] && module=$$(find tests -name "test_$(MODULE).py") || module="tests"; \
+	[ -n "$(MODULE)" ] && module=$$(find tests -name "test_$(MODULE).py") || module="$(PROJECT) tests"; \
 	$(UV_RUN) pytest $$module
 
 tool:

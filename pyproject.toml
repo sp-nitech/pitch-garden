@@ -36,7 +36,9 @@ lite = [
   "pylstraight >= 0.1.3",
   "swift-f0[audio] >= 0.3.0",
 ]
-all = ["pitch-garden[lite]"]
+# The trackers requiring PyTorch.
+torch = ["torch >= 2.2.0"]
+all = ["pitch-garden[lite,torch]"]
 
 [dependency-groups]
 dev = [
@@ -50,6 +52,10 @@ dev = [
   "twine",
 ]
 
+# The build of PyTorch for development, which is chosen by `make setup TORCH=...`.
+cpu = ["torch"]
+gpu = ["torch"]
+
 [project.urls]
 Source = "https://github.com/takenori-y/pitch-garden"
 
@@ -59,6 +65,8 @@ pitch-garden = "pitch_garden.cli:main"
 [tool.uv]
 # Ignore the packages uploaded recently to mitigate supply chain attacks.
 exclude-newer = "14 days"
+# The CPU and GPU builds of PyTorch cannot be installed together.
+conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
 # swift-f0 0.3.0 and pylstraight 0.1.3 are allowed as exceptions, while their newer
 # versions are not.
 exclude-newer-package = { swift-f0 = "2026-09-26T00:00:00Z", pylstraight = "2026-10-07T00:00:00Z" }
@@ -66,8 +74,15 @@ exclude-newer-package = { swift-f0 = "2026-09-26T00:00:00Z", pylstraight = "2026
 [tool.uv.workspace]
 members = ["bindings/sptk"]
 
+# The CPU build of PyTorch avoids the large CUDA libraries, e.g., in CI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
 pitch-garden-sptk = { workspace = true }
+torch = [{ index = "pytorch-cpu", group = "cpu" }]
 
 [tool.hatch.build.targets.sdist]
 only-include = ["pitch_garden"]
@@ -90,7 +105,7 @@ ignore = [
 exclude_lines = ["pragma: no cover", "except", "raise"]
 
 [tool.pyright]
-exclude = ["**/third_party", ".venv"]
+exclude = ["**/third_party", ".venv", "examples/*/exp"]
 
 [tool.pytest.ini_options]
-addopts = "-s -x"
+addopts = "-s -x --doctest-modules"
