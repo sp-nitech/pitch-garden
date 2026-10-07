@@ -47,8 +47,10 @@ from ._salience import (
     average_cents,
     decode_weighted_argmax,
     mask_out_of_range,
+    viterbi_path,
 )
 from ._torch import import_torch, resolve_torch_device
+from ._utils import frame_audio
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
 SAMPLE_RATE = 16000  # The sample rate of the model in Hz.
@@ -80,12 +82,8 @@ Decoder = Literal["viterbi", "weighted_argmax"]
 def decode_viterbi(probabilities: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Decode the pitch by Viterbi decoding followed by the weighted average.
 
-    The path is decoded as in torchcrepe, i.e., the emission is the softmax of the
-    probabilities, and the transition decreases linearly with the jump of the bins.
-    Unlike torchcrepe, all rows of the transition are normalized as the inner ones,
-    because the rows of the edge bins normalized by their smaller sums make the path
-    stick to the edge bins. The cents are then averaged around the path as in the
-    original CREPE.
+    The path is decoded as in torchcrepe by `viterbi_path`, and the cents are then
+    averaged around the path as in the original CREPE.
 
     Parameters
     ----------
@@ -102,37 +100,7 @@ def decode_viterbi(probabilities: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         The decoded pitch bins with shape (T,).
 
     """
-    tiny = np.finfo(np.float64).tiny
-    num_frames = len(probabilities)
-    emission = np.exp(probabilities - probabilities.max(axis=1, keepdims=True))
-    emission /= emission.sum(axis=1, keepdims=True)
-    log_emission = np.log(emission + tiny)
-
-    # The candidate predecessors i = j - jump of each bin j in ascending order of i,
-    # so that the first maximum is chosen as in the decoding with the full matrix.
-    jumps = np.arange(_MAX_JUMP, -_MAX_JUMP - 1, -1)
-    states = np.arange(NUM_BINS)
-    predecessors = states[None, :] - jumps[:, None]
-    valid = (0 <= predecessors) & (predecessors < NUM_BINS)
-    predecessors = np.clip(predecessors, 0, NUM_BINS - 1)
-    weights = (_MAX_JUMP + 1 - np.abs(jumps)).astype(np.float64)
-    log_transition = np.where(
-        valid, np.log(weights / weights.sum() + tiny)[:, None], -np.inf
-    )
-
-    value = log_emission[0] + np.log(1 / NUM_BINS + tiny)
-    pointers = np.zeros((num_frames, NUM_BINS), dtype=np.int16)  # Saving memory.
-    for t in range(1, num_frames):
-        scores = value[predecessors] + log_transition
-        best = np.argmax(scores, axis=0)
-        pointers[t] = predecessors[best, states]
-        value = scores[best, states] + log_emission[t]
-
-    bins = np.zeros(num_frames, dtype=np.int64)
-    if 0 < num_frames:
-        bins[-1] = np.argmax(value)
-    for t in range(num_frames - 1, 0, -1):
-        bins[t - 1] = pointers[t, bins[t]]
+    bins = viterbi_path(probabilities, _MAX_JUMP)
     return average_cents(probabilities, bins), bins
 
 
@@ -484,7 +452,7 @@ class CrepeAlgorithm(BaseAlgorithm):
         """Compute the probabilities of the pitch bins of normalized frames."""
         config = cast(CrepeConfig, self.config)
         outputs = []
-        with self.torch.no_grad():
+        with self.torch.inference_mode():
             for start in range(0, len(frames), config.batch_size):
                 batch = frames[start : start + config.batch_size]
                 # Normalize each frame as in torchcrepe.
@@ -519,11 +487,8 @@ class CrepeAlgorithm(BaseAlgorithm):
         """
         self.load()
         config = cast(CrepeConfig, self.config)
-        hop = max(1, round(SAMPLE_RATE * frame_period / 1000))
-        num_frames = 1 + len(audio.data) // hop
-        padded = np.pad(audio.data, WINDOW_SIZE // 2)
-        windows = np.lib.stride_tricks.sliding_window_view(padded, WINDOW_SIZE)
-        frames = windows[::hop][:num_frames]
+        frames, hop = frame_audio(audio.data, SAMPLE_RATE, frame_period, WINDOW_SIZE)
+        num_frames = len(frames)
         probabilities = self._infer(frames)
 
         probabilities = mask_out_of_range(probabilities, f0_range)

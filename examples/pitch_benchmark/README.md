@@ -30,14 +30,17 @@ The results on the test split.
 | :--- | ---: | ---: | ---: | ---: |
 | `crepe` | 92.3 | 92.6 | 4.5 | 90.4 |
 | `dio` | 87.8 | 88.2 | 6.7 | 86.0 |
+| `fcn-f0` | 94.2 | 94.5 | 4.1 | 92.2 |
 | `harvest` | 92.3 | 92.4 | 6.7 | 91.8 |
 | `pesto` | 89.6 | 90.6 | 8.0 | 84.5 |
+| `pyin` | 82.4 | 82.7 | 6.5 | 80.5 |
 | `rapt` | 83.7 | 84.8 | 7.0 | 83.2 |
 | `reaper` | 89.3 | 90.1 | 4.8 | 88.2 |
 | `rmvpe` | 95.9 | 96.0 | 2.6 | 94.3 |
 | `straight` | 90.5 | 90.8 | 8.3 | 88.1 |
 | `swift-f0` | 92.7 | 92.8 | 6.2 | 92.3 |
 | `swipe` | 88.1 | 88.2 | 8.0 | 87.8 |
+| `yin` | 82.5 | 83.6 | 5.8 | 79.9 |
 
 <!-- single:end -->
 
@@ -64,12 +67,18 @@ The first pass uses the fixed range, and the range of the second pass is exp(μ 
 | `dio` | single | 85.1 | 86.3 | 4.8 | 86.0 |
 | `dio` | two-pass-1st | 85.3 | 86.4 | 4.8 | 86.0 |
 | `dio` | two-pass-2nd | 86.1 | 87.2 | 4.0 | 86.5 |
+| `fcn-f0` | single | 93.1 | 93.4 | 3.0 | 92.7 |
+| `fcn-f0` | two-pass-1st | 93.1 | 93.4 | 3.0 | 92.7 |
+| `fcn-f0` | two-pass-2nd | 93.1 | 93.3 | 2.9 | 92.8 |
 | `harvest` | single | 91.1 | 91.3 | 6.3 | 91.5 |
 | `harvest` | two-pass-1st | 91.1 | 91.3 | 6.3 | 91.6 |
 | `harvest` | two-pass-2nd | 91.1 | 91.3 | 6.1 | 91.6 |
 | `pesto` | single | 86.8 | 88.2 | 8.8 | 82.2 |
 | `pesto` | two-pass-1st | 87.2 | 88.5 | 8.8 | 82.5 |
 | `pesto` | two-pass-2nd | 87.2 | 88.4 | 8.7 | 82.6 |
+| `pyin` | single | 77.7 | 77.9 | 7.8 | 77.6 |
+| `pyin` | two-pass-1st | 77.7 | 77.9 | 7.8 | 77.6 |
+| `pyin` | two-pass-2nd | 73.6 | 73.8 | 12.8 | 74.9 |
 | `rapt` | single | 84.5 | 85.1 | 3.4 | 84.9 |
 | `rapt` | two-pass-1st | 84.6 | 85.0 | 3.4 | 85.0 |
 | `rapt` | two-pass-2nd | 74.3 | 74.7 | 11.7 | 77.2 |
@@ -88,6 +97,9 @@ The first pass uses the fixed range, and the range of the second pass is exp(μ 
 | `swipe` | single | 84.4 | 84.6 | 9.5 | 85.3 |
 | `swipe` | two-pass-1st | 83.9 | 84.1 | 9.5 | 84.8 |
 | `swipe` | two-pass-2nd | 83.7 | 83.9 | 9.5 | 84.7 |
+| `yin` | single | 78.1 | 79.2 | 6.4 | 77.2 |
+| `yin` | two-pass-1st | 78.3 | 79.4 | 6.4 | 77.4 |
+| `yin` | two-pass-2nd | 78.3 | 79.3 | 6.3 | 77.6 |
 
 <!-- comparison_valid:end -->
 
@@ -103,12 +115,18 @@ The first pass uses the fixed range, and the range of the second pass is exp(μ 
 | `dio` | single | 88.0 | 88.3 | 5.2 | 87.4 |
 | `dio` | two-pass-1st | 87.9 | 88.2 | 5.2 | 87.4 |
 | `dio` | two-pass-2nd | 88.3 | 88.6 | 4.5 | 87.8 |
+| `fcn-f0` | single | 93.8 | 94.1 | 2.9 | 93.1 |
+| `fcn-f0` | two-pass-1st | 93.7 | 94.1 | 2.9 | 93.1 |
+| `fcn-f0` | two-pass-2nd | 93.6 | 93.9 | 2.8 | 93.2 |
 | `harvest` | single | 91.6 | 91.7 | 6.6 | 91.8 |
 | `harvest` | two-pass-1st | 91.6 | 91.6 | 6.6 | 91.7 |
 | `harvest` | two-pass-2nd | 91.9 | 92.0 | 6.1 | 92.0 |
 | `pesto` | single | 88.3 | 89.4 | 7.7 | 83.8 |
 | `pesto` | two-pass-1st | 88.4 | 89.5 | 7.7 | 83.9 |
 | `pesto` | two-pass-2nd | 88.4 | 89.5 | 7.8 | 83.9 |
+| `pyin` | single | 80.4 | 80.7 | 5.6 | 79.8 |
+| `pyin` | two-pass-1st | 80.3 | 80.6 | 5.6 | 79.7 |
+| `pyin` | two-pass-2nd | 78.1 | 78.4 | 8.1 | 78.4 |
 | `rapt` | single | 82.2 | 83.2 | 6.9 | 82.5 |
 | `rapt` | two-pass-1st | 82.5 | 83.1 | 6.9 | 82.7 |
 | `rapt` | two-pass-2nd | 77.1 | 77.7 | 10.8 | 79.4 |
@@ -127,5 +145,8 @@ The first pass uses the fixed range, and the range of the second pass is exp(μ 
 | `swipe` | single | 86.8 | 86.9 | 8.0 | 87.2 |
 | `swipe` | two-pass-1st | 85.9 | 86.0 | 8.0 | 86.3 |
 | `swipe` | two-pass-2nd | 85.6 | 85.7 | 8.3 | 86.1 |
+| `yin` | single | 80.7 | 81.7 | 4.5 | 79.5 |
+| `yin` | two-pass-1st | 80.8 | 81.7 | 4.5 | 79.7 |
+| `yin` | two-pass-2nd | 80.8 | 81.7 | 4.4 | 80.0 |
 
 <!-- comparison_test:end -->

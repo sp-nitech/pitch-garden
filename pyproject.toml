@@ -37,7 +37,7 @@ lite = [
   "swift-f0[audio] >= 0.3.0",
 ]
 # The trackers requiring PyTorch.
-torch = ["pesto-pitch >= 2.0.1", "torch >= 2.2.0"]
+torch = ["h5py >= 3.10.0", "pesto-pitch >= 2.0.1", "torch >= 2.2.0"]
 all = ["pitch-garden[lite,torch]"]
 
 [dependency-groups]
