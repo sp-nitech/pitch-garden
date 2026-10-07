@@ -27,13 +27,13 @@ pip install "pitch-garden[all]"  # All trackers
 | Name | Neural | F0 Range [Hz] | Voicing Threshold | Paper | Source |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | `crepe` | ✓ | 32 – 2006 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/1802.06182) | [GitHub](https://github.com/maxrmorrison/torchcrepe) |
-| `dio` | | 10 – Nyquist | 0.02 – 0.2 | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
+| `dio` | | 10 – Nyquist | 0.2 – 0.02 | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
 | `fcn-f0` | ✓ | 30 – 1000 | 0.0 – 1.0 | [ISCA Archive](https://www.isca-archive.org/interspeech_2019/ardaillon19_interspeech.html) | [GitHub](https://github.com/ardaillon/FCN-f0) |
-| `harvest` | | 10 – Nyquist | 0.0 – 0.2 | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
+| `harvest` | | 10 – Nyquist | 0.2 – 0.0 | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
 | `pesto` | ✓ | 28 – 3452 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2309.02265) | [GitHub](https://github.com/SonyCSLParis/pesto) |
 | `pyin` | | 16 – 8000 | | [IEEE Xplore](https://ieeexplore.ieee.org/document/6853678) | [GitHub](https://github.com/librosa/librosa) |
-| `rapt` | | 10 – Nyquist | -0.6 – 0.7 | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
-| `reaper` | | 10 – Nyquist | -0.5 – 1.6 | | [GitHub](https://github.com/google/reaper) |
+| `rapt` | | 10 – Nyquist | 0.7 – -0.6 | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
+| `reaper` | | 10 – Nyquist | 1.6 – -0.5 | | [GitHub](https://github.com/google/reaper) |
 | `rmvpe` | ✓ | 32 – 2005 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2306.15412) | [GitHub](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) |
 | `straight` | | 40 – Nyquist | | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/takenori-y/pylstraight) |
 | `swift-f0` | ✓ | 47 – 2093 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
@@ -42,7 +42,6 @@ pip install "pitch-garden[all]"  # All trackers
 
 The F0 range is the search range that can be specified, and the accuracy near its ends depends on the algorithm.
 `dio`, `harvest`, `rapt`, `reaper`, and `swipe` are based on the implementations in [SPTK](https://github.com/sp-nitech/SPTK), and their outputs are compatible with the `pitch` command of SPTK.
-The model weights not included in the packages are downloaded at the first use to `$TORCH_HOME/hub/checkpoints` (by default `~/.cache/torch/hub/checkpoints`), or can be given by the parameter `weights_path`.
 
 ## Unsupported Algorithms
 
@@ -82,7 +81,6 @@ pitch = tracker(waveform, sample_rate)
 ### Single algorithm
 
 A `Tracker` holds an algorithm and its own parameters.
-The meaning and the recommended range of `voicing_threshold` differ among the algorithms, e.g., a higher value gives more voiced frames in `rapt` but fewer in `swipe`.
 The trackers supporting GPUs, e.g., `crepe`, use a GPU if available, which is chosen when the tracker is created and can be changed by `tracker.replace(device="cpu")`.
 The output `Pitch` holds the F0 in Hz on a uniform frame grid regardless of the native frame period of the algorithm, and converts it to other formats on demand.
 
@@ -105,11 +103,13 @@ period = pitch.to("inverse")  # Fs/F0 in samples (unvoiced: 0)
 pitch.tofile("speech.lf0", output_format="log", file_type="double")
 ```
 
+> [!TIP]
+> The model weights not included in the packages are downloaded at the first use to `$TORCH_HOME/hub/checkpoints` (by default `~/.cache/torch/hub/checkpoints`), or can be given by the parameter `weights_path`.
+
 ### Multiple algorithms and voting
 
 A `Pipeline` runs the trackers in parallel where possible and votes their outputs.
 The same algorithm can be used with different parameters by giving different names.
-The median voter is compatible with `medfilt -w 1 -magic` of SPTK.
 
 ```python
 import pitch_garden as pg
@@ -131,9 +131,9 @@ for name, pitch in result.each.items():
 # swift-f0 Pitch(source='swift-f0', num_frames=100, ...)
 ```
 
-If a tracker fails, e.g., on very short audio, it is excluded from voting with a
-warning and its error message is kept in `result.errors`.
-Give `on_error="raise"` to `Pipeline` to raise the error instead.
+> [!NOTE]
+> If a tracker fails, e.g., on very short audio, it is excluded from voting with a warning and its error message is kept in `result.errors`.
+> Give `on_error="raise"` to `Pipeline` to raise the error instead.
 
 ### Two-pass tracking
 
