@@ -48,7 +48,7 @@ The model weights not included in the packages are downloaded at the first use t
 
 | Name | Neural | Paper | Source | Reason |
 | :--- | :---: | :---: | :---: | :--- |
-| PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate on [pitch-benchmark](examples/pitch_benchmark) than `fcn-f0`, on which it is based |
+| PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate than `fcn-f0` |
 | Praat (Parselmouth) | | [UvA](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
 
 ## Usage
