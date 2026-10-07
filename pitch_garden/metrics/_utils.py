@@ -57,26 +57,6 @@ def prepare(
     return ref, est
 
 
-def cents(estimate: np.ndarray, reference: np.ndarray) -> np.ndarray:
-    """Calculate the signed difference in cents.
-
-    Parameters
-    ----------
-    estimate : np.ndarray
-        The voiced estimated F0 in Hz.
-
-    reference : np.ndarray
-        The voiced reference F0 in Hz.
-
-    Returns
-    -------
-    out : np.ndarray
-        The difference in cents.
-
-    """
-    return 1200 * np.log2(estimate / reference)
-
-
 def safe_divide(numerator: SupportsFloat, denominator: SupportsFloat) -> float:
     """Divide and return NaN if the denominator is zero."""
     n, d = float(numerator), float(denominator)

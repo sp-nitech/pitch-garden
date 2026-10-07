@@ -39,19 +39,21 @@ from typing import Any, Literal, cast, get_args
 import numpy as np
 
 from ..interfaces.types import Audio
+from ..utils.units import cents_to_hz
+from ._salience import (
+    LOWEST_FREQUENCY,
+    NUM_BINS,
+    REFERENCE,
+    average_cents,
+    decode_weighted_argmax,
+    mask_out_of_range,
+)
+from ._torch import import_torch, resolve_torch_device
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
 SAMPLE_RATE = 16000  # The sample rate of the model in Hz.
 WINDOW_SIZE = 1024  # The number of samples of an input frame.
-NUM_BINS = 360  # The number of pitch bins.
-CENTS_PER_BIN = 20  # The interval of the pitch bins in cents.
 MAX_FMAX = 2006.0  # The upper limit of F0 in Hz given by torchcrepe.
-
-# The cents of the lowest pitch bin relative to 10 Hz.
-_CENTS_OFFSET = 1997.3794084376191
-
-# The pitch bins around the decoded one used for the weighted average.
-_AVERAGE_RADIUS = 4
 
 # The largest jump of the pitch bins between adjacent frames in Viterbi decoding.
 _MAX_JUMP = 11
@@ -73,94 +75,6 @@ _WEIGHTS_SHA256 = {
 
 ModelCapacity = Literal["full", "tiny"]
 Decoder = Literal["viterbi", "weighted_argmax"]
-
-
-def _import_torch() -> Any:
-    """Import PyTorch lazily.
-
-    Returns
-    -------
-    out : module
-        The torch module.
-
-    Raises
-    ------
-    ImportError
-        If PyTorch is not installed.
-
-    """
-    try:
-        import torch
-    except ImportError as e:
-        raise ImportError(
-            "CREPE requires PyTorch. "
-            'Install it via `pip install "pitch-garden[torch]"`.'
-        ) from e
-    return torch
-
-
-def bins_to_cents(bins: np.ndarray | float) -> np.ndarray:
-    """Convert pitch bins to cents relative to 10 Hz.
-
-    Parameters
-    ----------
-    bins : np.ndarray | float
-        The pitch bins, which may be fractional.
-
-    Returns
-    -------
-    out : np.ndarray
-        The cents.
-
-    """
-    return CENTS_PER_BIN * np.asarray(bins, dtype=np.float64) + _CENTS_OFFSET
-
-
-def _frequency_to_bin(frequency: float) -> float:
-    """Convert a frequency in Hz to a fractional pitch bin."""
-    return (1200 * np.log2(frequency / 10) - _CENTS_OFFSET) / CENTS_PER_BIN
-
-
-def _average_cents(probabilities: np.ndarray, bins: np.ndarray) -> np.ndarray:
-    """Average the cents around the given bins weighted by the probabilities."""
-    num_frames = len(probabilities)
-    offsets = np.arange(-_AVERAGE_RADIUS, _AVERAGE_RADIUS + 1)
-    window = bins[:, None] + offsets[None, :]
-    valid = (0 <= window) & (window < NUM_BINS)
-    window = np.clip(window, 0, NUM_BINS - 1)
-    weights = probabilities[np.arange(num_frames)[:, None], window]
-    weights = np.where(valid & np.isfinite(weights), weights, 0.0)
-    total = weights.sum(axis=1)
-    cents = (weights * bins_to_cents(window)).sum(axis=1)
-    safe_total = np.where(0 < total, total, 1)
-    return np.where(0 < total, cents / safe_total, bins_to_cents(bins))
-
-
-def decode_weighted_argmax(
-    probabilities: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Decode the pitch by the weighted average around the argmax.
-
-    This follows the original CREPE, where the probabilities are used as the weights
-    and no dither is added.
-
-    Parameters
-    ----------
-    probabilities : np.ndarray
-        The probabilities of the pitch bins with shape (T, 360), where the bins out
-        of the search range are -inf.
-
-    Returns
-    -------
-    cents : np.ndarray
-        The decoded pitch in cents relative to 10 Hz with shape (T,).
-
-    bins : np.ndarray
-        The decoded pitch bins with shape (T,).
-
-    """
-    bins = np.argmax(probabilities, axis=1)
-    return _average_cents(probabilities, bins), bins
 
 
 def decode_viterbi(probabilities: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -219,7 +133,7 @@ def decode_viterbi(probabilities: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         bins[-1] = np.argmax(value)
     for t in range(num_frames - 1, 0, -1):
         bins[t - 1] = pointers[t, bins[t]]
-    return _average_cents(probabilities, bins), bins
+    return average_cents(probabilities, bins), bins
 
 
 DECODERS = {"viterbi": decode_viterbi, "weighted_argmax": decode_weighted_argmax}
@@ -350,7 +264,7 @@ class CrepeConfig(AlgorithmConfig):
     silence_threshold: float | None = None
 
     batch_size: int = 512  # The number of frames in a forward pass.
-    device: str = "cpu"  # The device of PyTorch, e.g., cpu or cuda.
+    device: str = "auto"  # The device of PyTorch, where 'auto' prefers a GPU.
 
     # The number of CPU threads used by PyTorch. If None, the default of PyTorch is
     # used, or 1 when running in parallel.
@@ -452,6 +366,7 @@ class CrepeAlgorithm(BaseAlgorithm):
 
     config_class = CrepeConfig
     is_neural = True
+    supports_gpu = True
     # The setting chosen on the speech of pitch-benchmark (examples/pitch_benchmark).
     two_pass_policy = TwoPassPolicy(enabled=False)
 
@@ -467,23 +382,6 @@ class CrepeAlgorithm(BaseAlgorithm):
         super().__init__(config)
         self.torch: Any = None
         self.model: Any = None
-
-    @classmethod
-    def is_parallel_safe(cls, config: AlgorithmConfig) -> bool:
-        """Get whether CREPE can be run in a worker process.
-
-        Parameters
-        ----------
-        config : AlgorithmConfig
-            The configuration of CREPE.
-
-        Returns
-        -------
-        out : bool
-            True if CREPE runs on CPU.
-
-        """
-        return cast(CrepeConfig, config).device == "cpu"
 
     @classmethod
     def get_supported_sample_rates(cls) -> tuple[int, int] | None:
@@ -507,7 +405,7 @@ class CrepeAlgorithm(BaseAlgorithm):
             The lower and upper limits in Hz.
 
         """
-        return float(10 * 2 ** (_CENTS_OFFSET / 1200)), MAX_FMAX
+        return LOWEST_FREQUENCY, MAX_FMAX
 
     @classmethod
     def parallel_config(cls, config: AlgorithmConfig) -> AlgorithmConfig:
@@ -527,6 +425,23 @@ class CrepeAlgorithm(BaseAlgorithm):
         if isinstance(config, CrepeConfig) and config.num_threads is None:
             return replace(config, num_threads=1)
         return config
+
+    @classmethod
+    def resolve_device(cls, device: str) -> str:
+        """Resolve the device 'auto' into cuda if a GPU is available.
+
+        Parameters
+        ----------
+        device : str
+            The device given by users.
+
+        Returns
+        -------
+        out : str
+            The actual device.
+
+        """
+        return resolve_torch_device(device)
 
     def _weights_path(self) -> str:
         """Get the path to the weights, downloading them if necessary."""
@@ -554,7 +469,7 @@ class CrepeAlgorithm(BaseAlgorithm):
         """
         if self.model is not None:
             return
-        self.torch = _import_torch()
+        self.torch = import_torch("CREPE")
         config = cast(CrepeConfig, self.config)
         if config.num_threads is not None:
             self.torch.set_num_threads(config.num_threads)
@@ -611,11 +526,7 @@ class CrepeAlgorithm(BaseAlgorithm):
         frames = windows[::hop][:num_frames]
         probabilities = self._infer(frames)
 
-        fmin, fmax = f0_range
-        lower = int(np.floor(_frequency_to_bin(fmin)))
-        upper = int(np.ceil(_frequency_to_bin(fmax)))
-        probabilities[:, : max(0, lower)] = -np.inf
-        probabilities[:, max(0, upper) :] = -np.inf
+        probabilities = mask_out_of_range(probabilities, f0_range)
 
         cents, bins = DECODERS[config.decoder](probabilities)
         score = probabilities[np.arange(num_frames), bins]
@@ -624,7 +535,7 @@ class CrepeAlgorithm(BaseAlgorithm):
         if config.silence_threshold is not None:
             loudness = a_weighted_loudness(frames, config.batch_size)
             score = np.where(loudness < config.silence_threshold, 0.0, score)
-        candidate = 10 * 2 ** (cents / 1200)
+        candidate = cents_to_hz(cents, REFERENCE)
         f0 = np.where(config.voicing_threshold <= score, candidate, 0.0)
         return NativeContour(
             times=np.arange(num_frames) * hop / SAMPLE_RATE,

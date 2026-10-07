@@ -37,7 +37,7 @@ lite = [
   "swift-f0[audio] >= 0.3.0",
 ]
 # The trackers requiring PyTorch.
-torch = ["torch >= 2.2.0"]
+torch = ["pesto-pitch >= 2.0.1", "torch >= 2.2.0"]
 all = ["pitch-garden[lite,torch]"]
 
 [dependency-groups]
@@ -53,8 +53,8 @@ dev = [
 ]
 
 # The build of PyTorch for development, which is chosen by `make setup TORCH=...`.
-cpu = ["torch"]
-gpu = ["torch"]
+cpu = ["torch", "torchaudio"]
+gpu = ["torch", "torchaudio"]
 
 [project.urls]
 Source = "https://github.com/takenori-y/pitch-garden"
@@ -83,6 +83,7 @@ explicit = true
 [tool.uv.sources]
 pitch-garden-sptk = { workspace = true }
 torch = [{ index = "pytorch-cpu", group = "cpu" }]
+torchaudio = [{ index = "pytorch-cpu", group = "cpu" }]
 
 [tool.hatch.build.targets.sdist]
 only-include = ["pitch_garden"]
@@ -100,6 +101,10 @@ ignore = [
   "D203", # 1 blank line required before class docstring
   "D213", # Multi-line docstring summary should start at the second line
 ]
+
+[tool.ruff.lint.isort]
+# The utilities shared by the recipes, which are linked from 'local/utils'.
+known-local-folder = ["utils"]
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "except", "raise"]

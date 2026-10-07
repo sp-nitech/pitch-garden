@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from ._utils import F0Like, cents, prepare, safe_divide
+from ..utils.units import hz_to_cents
+from ._utils import F0Like, prepare, safe_divide
 
 
 def gpe(
@@ -74,7 +75,7 @@ def fpe(
     fine[both] = np.abs(est[both] / ref[both] - 1) <= threshold
     if not np.any(fine):
         return float("nan")
-    return float(np.std(cents(est[fine], ref[fine])))
+    return float(np.std(hz_to_cents(est[fine], ref[fine])))
 
 
 def _hits(
@@ -83,7 +84,7 @@ def _hits(
     """Find the frames whose estimated F0 is within the tolerance."""
     both = (0 < ref) & (0 < est)
     hits = np.zeros_like(both)
-    diff = cents(est[both], ref[both])
+    diff = hz_to_cents(est[both], ref[both])
     if chroma:
         diff = (diff + 600) % 1200 - 600
     hits[both] = np.abs(diff) < tolerance

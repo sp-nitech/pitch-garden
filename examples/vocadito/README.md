@@ -21,10 +21,13 @@ The metrics are computed on the pooled frames of all excerpts with a tolerance o
 
 | Tracker | RPA [%] | RCA [%] | VDE [%] | OA [%] |
 | :--- | ---: | ---: | ---: | ---: |
+| `crepe` | 98.8 | 98.9 | 12.8 | 86.7 |
 | `dio` | 85.8 | 86.4 | 15.7 | 77.7 |
 | `harvest` | 96.5 | 96.7 | 7.2 | 92.1 |
+| `pesto` | 98.3 | 98.9 | 10.5 | 88.5 |
 | `rapt` | 95.6 | 96.9 | 7.0 | 90.4 |
 | `reaper` | 95.6 | 96.1 | 9.9 | 87.9 |
+| `rmvpe` | 98.3 | 98.4 | 7.7 | 91.4 |
 | `straight` | 97.4 | 97.4 | 6.7 | 92.3 |
 | `swift-f0` | 97.1 | 97.2 | 5.2 | 93.9 |
 | `swipe` | 97.0 | 97.1 | 6.8 | 92.6 |

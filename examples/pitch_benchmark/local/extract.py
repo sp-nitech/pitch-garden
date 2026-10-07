@@ -8,15 +8,15 @@ The settings are as follows, where the first pass uses the fixed search range.
 """
 
 import argparse
-import dataclasses
 import glob
 import os
 from concurrent.futures import ProcessPoolExecutor
 from typing import cast
 
 import pitch_garden as pg
-from pitch_garden.algorithms import ALGORITHM_MAP
 from pitch_garden.algorithms.base import VoicingSource
+
+import utils.trackers
 
 # The frame period dividing that of the labels (16 ms) into four.
 FRAME_PERIOD = 4.0
@@ -89,7 +89,7 @@ def create_tracker(
         The name of the setting.
 
     device : str | None, optional
-        The device given to the algorithms having the parameter, e.g., cuda.
+        The device given to the algorithms supporting GPUs, e.g., cuda.
 
     num_threads : int | None, optional
         The number of threads given to the algorithms having the parameter.
@@ -104,15 +104,13 @@ def create_tracker(
     if setting != "single":
         voicing = cast(VoicingSource, setting.removeprefix("two-pass-"))
         policy = pg.TwoPassPolicy(enabled=True, voicing_from=voicing)
-    fields = {f.name for f in dataclasses.fields(ALGORITHM_MAP[algorithm].config_class)}
-    options = {"device": device, "num_threads": num_threads}
-    params = {k: v for k, v in options.items() if k in fields and v is not None}
-    return pg.Tracker(
+    return utils.trackers.create_tracker(
         algorithm,
+        device=device,
+        num_threads=num_threads,
         fmin=F0_RANGE[0],
         fmax=F0_RANGE[1],
         two_pass_policy=policy,
-        **params,
     )
 
 

@@ -2,6 +2,8 @@
 
 from .base import BaseAlgorithm
 from .crepe import CrepeAlgorithm
+from .pesto import PestoAlgorithm
+from .rmvpe import RmvpeAlgorithm
 from .sptk import (
     DioAlgorithm,
     HarvestAlgorithm,
@@ -16,8 +18,10 @@ ALGORITHM_MAP: dict[str, type[BaseAlgorithm]] = {
     "crepe": CrepeAlgorithm,
     "dio": DioAlgorithm,
     "harvest": HarvestAlgorithm,
+    "pesto": PestoAlgorithm,
     "rapt": RaptAlgorithm,
     "reaper": ReaperAlgorithm,
+    "rmvpe": RmvpeAlgorithm,
     "straight": StraightAlgorithm,
     "swift-f0": SwiftF0Algorithm,
     "swipe": SwipeAlgorithm,

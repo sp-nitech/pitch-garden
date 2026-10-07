@@ -7,13 +7,14 @@ averaged over the corpora of the speech, optionally with those of the singing vo
 import argparse
 import glob
 import os
-import re
 from collections.abc import Sequence
 
 import numpy as np
 
 from pitch_garden.metrics import evaluate
-from pitch_garden.utils.grid import resample
+
+from utils.estimates import load_estimate
+from utils.report import COLUMNS, format_table, format_values, update_readme
 
 # The corpora of the speech and the singing voice, where those of musical
 # instruments are excluded.
@@ -23,14 +24,6 @@ CORPORA = SPEECH_CORPORA + SINGING_CORPORA
 
 # The frame period of the labels, i.e., 256 samples at 16 kHz.
 LABEL_FRAME_PERIOD = 16.0
-
-# The columns of the results table: (key, header, scale, number of decimals).
-COLUMNS = [
-    ("rpa", "RPA [%]", 100, 1),
-    ("rca", "RCA [%]", 100, 1),
-    ("vde", "VDE [%]", 100, 1),
-    ("oa", "OA [%]", 100, 1),
-]
 
 
 def load_label(path: str) -> tuple[np.ndarray, np.ndarray]:
@@ -49,35 +42,6 @@ def load_label(path: str) -> tuple[np.ndarray, np.ndarray]:
     """
     with np.load(path) as data:
         return data["pitch"].astype(np.float64), data["trusted"].astype(bool)
-
-
-def load_estimate(path: str, num_frames: int) -> np.ndarray:
-    """Load an estimated F0 file and put it on the frame grid of the labels.
-
-    Parameters
-    ----------
-    path : str
-        The path to the NPZ file saved by pitch-garden in the 'linear' format.
-
-    num_frames : int
-        The number of frames of the label.
-
-    Returns
-    -------
-    out : np.ndarray
-        The estimated F0 in Hz on the frame grid of the label.
-
-    """
-    with np.load(path) as data:
-        f0 = data["f0"]
-        frame_period = float(data["frame_period"])
-    est_times = np.arange(len(f0)) * frame_period / 1000
-    grid = resample(
-        est_times, f0, num_frames=num_frames, frame_period=LABEL_FRAME_PERIOD
-    )
-    # The frames beyond the end of the estimate are regarded as unvoiced.
-    times = np.arange(num_frames) * LABEL_FRAME_PERIOD / 1000
-    return np.where(times <= est_times[-1] + 1e-9, grid.f0, 0.0)
 
 
 def evaluate_corpus(
@@ -118,7 +82,7 @@ def evaluate_corpus(
         if not os.path.isfile(est_path):
             raise FileNotFoundError(f"The estimate is not found: {est_path}")
         ref, trusted = load_label(path)
-        est = load_estimate(est_path, len(ref))
+        est = load_estimate(est_path, len(ref), LABEL_FRAME_PERIOD)
         references.append(ref)
         estimates.append(est)
         masks.append(trusted)
@@ -183,35 +147,6 @@ def evaluate_tracker(
     return macro_average(results)
 
 
-def _format_values(metrics: dict[str, float]) -> str:
-    """Format the metrics as the cells of a Markdown table."""
-    return " | ".join(
-        f"{metrics[key] * scale:.{digits}f}" for key, _, scale, digits in COLUMNS
-    )
-
-
-def format_table(results: dict[str, dict[str, float]]) -> str:
-    """Format the results as a Markdown table.
-
-    Parameters
-    ----------
-    results : dict[str, dict[str, float]]
-        The metrics keyed by the tracker names.
-
-    Returns
-    -------
-    out : str
-        The Markdown table, where the trackers are sorted by name.
-
-    """
-    header = "| Tracker | " + " | ".join(c[1] for c in COLUMNS) + " |"
-    align = "| :--- | " + " | ".join("---:" for _ in COLUMNS) + " |"
-    rows = [header, align]
-    for name in sorted(results):
-        rows.append(f"| `{name}` | " + _format_values(results[name]) + " |")
-    return "\n".join(rows)
-
-
 def format_comparison_table(results: dict[tuple[str, str], dict[str, float]]) -> str:
     """Format the comparison of the settings as a Markdown table.
 
@@ -230,40 +165,8 @@ def format_comparison_table(results: dict[tuple[str, str], dict[str, float]]) ->
     align = "| :--- | :--- | " + " | ".join("---:" for _ in COLUMNS) + " |"
     rows = [header, align]
     for (name, setting), metrics in results.items():
-        rows.append(f"| `{name}` | {setting} | " + _format_values(metrics) + " |")
+        rows.append(f"| `{name}` | {setting} | " + format_values(metrics) + " |")
     return "\n".join(rows)
-
-
-def update_readme(path: str, name: str, table: str) -> None:
-    """Replace a named section of a README file.
-
-    Parameters
-    ----------
-    path : str
-        The path to the README file.
-
-    name : str
-        The name of the section between '<!-- name:begin -->' and '<!-- name:end -->'.
-
-    table : str
-        The new contents of the section.
-
-    Raises
-    ------
-    ValueError
-        If the markers of the section are not found.
-
-    """
-    begin, end = f"<!-- {name}:begin -->", f"<!-- {name}:end -->"
-    with open(path) as f:
-        text = f.read()
-    pattern = re.compile(re.escape(begin) + r"\n.*?" + re.escape(end), re.S)
-    if pattern.search(text) is None:
-        raise ValueError(f"{begin} and {end} are not found in {path}.")
-    # The table is surrounded by blank lines to be stable under mdformat.
-    replacement = f"{begin}\n\n{table}\n\n{end}"
-    with open(path, "w") as f:
-        f.write(pattern.sub(lambda _: replacement, text))
 
 
 def main() -> None:

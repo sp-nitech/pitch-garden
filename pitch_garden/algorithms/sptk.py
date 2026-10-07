@@ -273,7 +273,7 @@ class ReaperAlgorithm(SptkAlgorithm):
     config_class = ReaperConfig
     sptk_name = "reaper"
     # The setting chosen on the speech of pitch-benchmark (examples/pitch_benchmark).
-    two_pass_policy = TwoPassPolicy(enabled=False)
+    two_pass_policy = TwoPassPolicy(enabled=True, voicing_from="1st")
 
 
 class DioAlgorithm(SptkAlgorithm):
@@ -291,4 +291,4 @@ class HarvestAlgorithm(SptkAlgorithm):
     config_class = HarvestConfig
     sptk_name = "harvest"
     # The setting chosen on the speech of pitch-benchmark (examples/pitch_benchmark).
-    two_pass_policy = TwoPassPolicy(enabled=False)
+    two_pass_policy = TwoPassPolicy(enabled=True, voicing_from="2nd")

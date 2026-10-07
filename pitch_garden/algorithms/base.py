@@ -21,6 +21,11 @@ class AlgorithmConfig:
     fmin: float | None = None  # The lower bound of the F0 search range in Hz.
     fmax: float | None = None  # The upper bound of the F0 search range in Hz.
 
+    # The device of the algorithm, e.g., cpu or cuda, where devices other than cpu
+    # are accepted only by the algorithms supporting GPUs. The device 'auto' is
+    # resolved when the tracker is created, e.g., into cuda if a GPU is available.
+    device: str = "cpu"
+
 
 # The pass giving the voicing decisions in the two-pass tracking.
 VoicingSource = Literal["1st", "2nd"]
@@ -67,6 +72,9 @@ class BaseAlgorithm(ABC):
     # Whether the algorithm is based on neural networks.
     is_neural: ClassVar[bool] = False
 
+    # Whether the algorithm can run on GPUs, i.e., accepts devices other than cpu.
+    supports_gpu: ClassVar[bool] = False
+
     # The recommended settings of the two-pass tracking.
     two_pass_policy: ClassVar[TwoPassPolicy] = TwoPassPolicy()
 
@@ -92,17 +100,35 @@ class BaseAlgorithm(ABC):
         Parameters
         ----------
         config : AlgorithmConfig
-            The configuration of the algorithm. Algorithms running on GPUs define
-            the device as a field of their own configuration.
+            The configuration of the algorithm.
 
         """
         self.config = config
 
     @classmethod
+    def resolve_device(cls, device: str) -> str:
+        """Resolve the device 'auto' into an actual device.
+
+        Algorithms supporting GPUs should return a GPU device if it is available.
+
+        Parameters
+        ----------
+        device : str
+            The device given by users.
+
+        Returns
+        -------
+        out : str
+            The actual device, which is cpu for 'auto' by default.
+
+        """
+        return "cpu" if device == "auto" else device
+
+    @classmethod
     def is_parallel_safe(cls, config: AlgorithmConfig) -> bool:
         """Get whether the algorithm can be run in a worker process.
 
-        Algorithms running on GPUs should return False for non-CPU devices.
+        The algorithms on devices other than CPU are run in the main process.
 
         Parameters
         ----------
@@ -115,7 +141,7 @@ class BaseAlgorithm(ABC):
             True if the algorithm can be run in a worker process.
 
         """
-        return True
+        return config.device == "cpu"
 
     @classmethod
     def get_f0_limits(cls) -> tuple[float, float]:

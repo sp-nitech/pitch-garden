@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import fields
+from dataclasses import fields, replace
 from typing import Any
 
 import numpy as np
@@ -87,7 +87,7 @@ class Tracker:
 
         **params : Any
             The algorithm-specific parameters defined by its configuration class,
-            including the device for algorithms running on GPUs.
+            including the device, e.g., cuda, for algorithms supporting GPUs.
 
         Raises
         ------
@@ -147,6 +147,11 @@ class Tracker:
                 f"Valid parameters are: {valid_keys}"
             )
         config = algo_cls.config_class(**params)
+        config = replace(config, device=algo_cls.resolve_device(config.device))
+        if not algo_cls.supports_gpu and config.device != "cpu":
+            raise ValueError(
+                f"{algo_cls.__name__} runs only on CPU, got device '{config.device}'."
+            )
 
         if not algo_cls.supports_f0_range and (
             config.fmin is not None or config.fmax is not None

@@ -13,7 +13,7 @@ sha256="f4de960de53c1b8d069ade901b8145c0ccc311bd3760b613bd32474fa8b3a374"
 db=downloads/eval
 exp=exp
 nj=8
-device=cuda # The device of the neural trackers, e.g., cpu or cuda.
+device=auto # The device of the neural trackers, where auto prefers a GPU.
 
 # Download the eval set.
 if [ ! -d "$db" ]; then
@@ -24,7 +24,12 @@ if [ ! -d "$db" ]; then
     rm downloads/eval.tar
 fi
 
-algorithms="swift-f0 crepe rapt swipe reaper dio harvest straight"
+# The algorithms given as the arguments, e.g., ./run.sh pesto, or all the registered
+# ones. The results of the other algorithms in exp are kept and scored as well.
+algorithms="$*"
+if [ -z "$algorithms" ]; then
+    algorithms=$(python -c "from pitch_garden.algorithms import ALGORITHM_MAP; print(*ALGORITHM_MAP)")
+fi
 
 extract() {
     local split=$1

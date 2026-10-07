@@ -7,7 +7,7 @@ from typing import Literal, cast, get_args
 
 import numpy as np
 
-from ..utils.grid import check_frame_period, resample
+from ..utils.grid import check_frame_period, get_frame_times, resample
 
 LOG_ZERO = -1e10  # The magic number for unvoiced frames in the log domain (SPTK).
 
@@ -261,6 +261,44 @@ class Pitch:
             f0=f0,
             source=self.source if source is None else source,
             native=None,
+        )
+
+    def to_grid(self, num_frames: int, frame_period: float) -> Pitch:
+        """Put the F0 contour on another uniform frame grid.
+
+        The F0 and the score are resampled in the same way as the native contours of
+        trackers, and the frames beyond the last frame of the contour are unvoiced.
+        The native contour is dropped because it is no longer consistent.
+
+        Parameters
+        ----------
+        num_frames : int
+            The number of frames of the new grid.
+
+        frame_period : float
+            The frame period of the new grid in milliseconds.
+
+        Returns
+        -------
+        out : Pitch
+            The new pitch object.
+
+        """
+        check_frame_period(frame_period)
+        times = get_frame_times(self.length, self.frame_period)
+        grid = resample(
+            times,
+            self.f0,
+            num_frames=num_frames,
+            frame_period=frame_period,
+            score=self.score,
+        )
+        f0 = grid.f0
+        if 0 < self.length:
+            beyond = times[-1] + 1e-9 < get_frame_times(num_frames, frame_period)
+            f0 = np.where(beyond, 0.0, f0)
+        return replace(
+            self, f0=f0, frame_period=frame_period, score=grid.score, native=None
         )
 
     def tofile(
