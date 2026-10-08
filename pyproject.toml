@@ -32,6 +32,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 # The trackers not requiring PyTorch.
 lite = [
+  "amfm-decompy >= 1.0.12.2",
   "pitch-garden-sptk >= 0.1.0",
   "pylstraight >= 0.1.3",
   "swift-f0[audio] >= 0.3.0",

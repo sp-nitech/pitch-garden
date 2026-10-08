@@ -33,6 +33,7 @@ to PyTorch. The weights in HDF5 are read by h5py.
 
 from __future__ import annotations
 
+import functools
 import os
 from dataclasses import dataclass, replace
 from typing import Any, Literal, cast, get_args
@@ -51,13 +52,6 @@ LOWEST_FREQUENCY = 30.0  # The frequency of the lowest pitch bin in Hz.
 HIGHEST_FREQUENCY = 1000.0  # The frequency of the highest pitch bin in Hz.
 REFERENCE = 10.0  # The reference frequency of the cents in Hz.
 
-# The cents of the pitch bins, which are evenly spaced by about 12.5 cents.
-_BIN_CENTS = np.linspace(
-    hz_to_cents(LOWEST_FREQUENCY, REFERENCE),
-    hz_to_cents(HIGHEST_FREQUENCY, REFERENCE),
-    NUM_BINS,
-)
-
 # The number of the pitch bins averaged on each side of the argmax.
 _AVERAGE_RADIUS = 4
 
@@ -65,10 +59,10 @@ ModelSize = Literal["929", "993", "1953"]
 
 # The numbers of filters, the kernel widths, and the number of the pooled layers of
 # the models, whose names are their input sizes in samples.
-_ARCHITECTURES: dict[str, tuple[list[int], list[int], int]] = {
-    "929": ([256, 32, 128, 256, 512], [32, 64, 64, 64, 64], 2),
-    "993": ([256, 32, 32, 128, 256, 512], [32, 32, 32, 32, 32, 32], 3),
-    "1953": ([256, 32, 32, 128, 256, 512], [32, 64, 64, 64, 64, 64], 3),
+_ARCHITECTURES: dict[str, tuple[tuple[int, ...], tuple[int, ...], int]] = {
+    "929": ((256, 32, 128, 256, 512), (32, 64, 64, 64, 64), 2),
+    "993": ((256, 32, 32, 128, 256, 512), (32, 32, 32, 32, 32, 32), 3),
+    "1953": ((256, 32, 32, 128, 256, 512), (32, 64, 64, 64, 64, 64), 3),
 }
 
 # The weights of FCN-f0 at a fixed commit and their SHA-256 hashes.
@@ -81,6 +75,26 @@ _WEIGHTS_SHA256 = {
     "993": "1ef2ec2762399e74809c46b7484f637e2a9d6e9b1a4daef06b3613f731011222",
     "1953": "62497ec0f8d150f71968168f7e219e9746b578dce151cdd3f4bf6c54f81d3d19",
 }
+
+
+@functools.cache
+def _bin_cents() -> np.ndarray:
+    """Get the cents of the pitch bins relative to 10 Hz.
+
+    Returns
+    -------
+    out : np.ndarray
+        The read-only cents evenly spaced by about 12.5 cents with shape (486,),
+        which are shared by the calls.
+
+    """
+    cents = np.linspace(
+        hz_to_cents(LOWEST_FREQUENCY, REFERENCE),
+        hz_to_cents(HIGHEST_FREQUENCY, REFERENCE),
+        NUM_BINS,
+    )
+    cents.setflags(write=False)
+    return cents
 
 
 def mask_out_of_range(
@@ -103,7 +117,8 @@ def mask_out_of_range(
 
     """
     lower, upper = hz_to_cents(np.asarray(f0_range), REFERENCE)
-    outside = (_BIN_CENTS < lower) | (upper < _BIN_CENTS)
+    cents = _bin_cents()
+    outside = (cents < lower) | (upper < cents)
     return np.where(outside, 0.0, salience)
 
 
@@ -127,10 +142,11 @@ def local_average_cents(salience: np.ndarray) -> np.ndarray:
     indices = np.clip(indices, 0, NUM_BINS - 1)
     weights = np.where(inside, np.take_along_axis(salience, indices, axis=1), 0.0)
     total = weights.sum(axis=1)
-    cents = (weights * _BIN_CENTS[indices]).sum(axis=1)
+    bin_cents = _bin_cents()
+    cents = (weights * bin_cents[indices]).sum(axis=1)
     # The pitch of the frames without salience falls back to the argmax.
     safe_total = np.where(0 < total, total, 1)
-    return np.where(0 < total, cents / safe_total, _BIN_CENTS[bins])
+    return np.where(0 < total, cents / safe_total, bin_cents[bins])
 
 
 @dataclass(frozen=True)

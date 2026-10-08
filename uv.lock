@@ -36,6 +36,19 @@ wheels = [
 ]
 
 [[package]]
+name = "amfm-decompy"
+version = "1.0.12.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/fa/38a2cb818d465cefa5c32ea11659c0fcb17f7011bc0ecd092c03694bc893/amfm_decompy-1.0.12.2.tar.gz", hash = "sha256:7cb7bc1cde9d19f76e7729387d7c0ee08db1c90247a632b6c263d78ddc64f5b7", size = 813497, upload-time = "2025-05-23T02:28:06.752Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/d5/046e4b6ba2aa3f663711139fe1c373b834e01906ea1c96fa8945f854210f/amfm_decompy-1.0.12.2-py3-none-any.whl", hash = "sha256:61387a0c96ca98f3d25d2996e7ba96c044a7f537984d84c462f5f17a9d00b597", size = 45457, upload-time = "2025-05-23T02:27:59.856Z" },
+]
+
+[[package]]
 name = "antlr4-python3-runtime"
 version = "4.9.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1247,6 +1260,7 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "amfm-decompy" },
     { name = "h5py" },
     { name = "pesto-pitch" },
     { name = "pitch-garden-sptk" },
@@ -1257,6 +1271,7 @@ all = [
     { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-12-pitch-garden-cpu') or (extra == 'group-12-pitch-garden-cpu' and extra == 'group-12-pitch-garden-gpu')" },
 ]
 lite = [
+    { name = "amfm-decompy" },
     { name = "pitch-garden-sptk" },
     { name = "pylstraight" },
     { name = "swift-f0", extra = ["audio"] },
@@ -1293,6 +1308,8 @@ gpu = [
 
 [package.metadata]
 requires-dist = [
+    { name = "amfm-decompy", marker = "extra == 'all'", specifier = ">=1.0.12.2" },
+    { name = "amfm-decompy", marker = "extra == 'lite'", specifier = ">=1.0.12.2" },
     { name = "h5py", marker = "extra == 'all'", specifier = ">=3.10.0" },
     { name = "h5py", marker = "extra == 'torch'", specifier = ">=3.10.0" },
     { name = "numpy", specifier = ">=1.26.0" },

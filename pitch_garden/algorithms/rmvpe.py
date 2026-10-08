@@ -43,7 +43,7 @@ from typing import Any, cast
 import numpy as np
 
 from ..interfaces.types import Audio
-from ..utils.units import cents_to_hz, hz_to_mel, mel_to_hz
+from ..utils.units import cents_to_hz
 from ._salience import (
     LOWEST_FREQUENCY,
     NUM_BINS,
@@ -53,6 +53,7 @@ from ._salience import (
     mask_out_of_range,
 )
 from ._torch import import_torch, resolve_torch_device
+from ._utils import mel_filterbank
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
 SAMPLE_RATE = 16000  # The sample rate of the model in Hz.
@@ -74,30 +75,6 @@ _WEIGHTS_URL = (
     "e6d0c1a17da07c33557852f9dfa2bd44cc75737d/rmvpe.pt"
 )
 _WEIGHTS_SHA256 = "6d62215f4306e3ca278246188607209f09af3dc77ed4232efdd069798c4ec193"
-
-
-def mel_filterbank() -> np.ndarray:
-    """Calculate the mel filterbank used by RVC.
-
-    This is identical to `librosa.filters.mel` with the HTK formula and the Slaney
-    normalization, which are the settings of RVC.
-
-    Returns
-    -------
-    out : np.ndarray
-        The filterbank with shape (128, 513).
-
-    """
-    fft_frequencies = np.linspace(0, SAMPLE_RATE / 2, 1 + _N_FFT // 2)
-    mels = np.linspace(hz_to_mel(_MEL_FMIN), hz_to_mel(_MEL_FMAX), _N_MELS + 2)
-    mel_frequencies = mel_to_hz(mels)
-    differences = np.diff(mel_frequencies)
-    ramps = np.subtract.outer(mel_frequencies, fft_frequencies)
-    lower = -ramps[:-2] / differences[:-1, None]
-    upper = ramps[2:] / differences[1:, None]
-    weights = np.maximum(0, np.minimum(lower, upper))
-    weights *= 2.0 / (mel_frequencies[2:] - mel_frequencies[:-2])[:, None]
-    return weights.astype(np.float32)
 
 
 def _create_model(torch: Any) -> Any:
@@ -291,10 +268,8 @@ class RmvpeConfig(AlgorithmConfig):
     """Configuration of RMVPE."""
 
     # The frames whose salience is greater than or equal to the threshold are
-    # regarded as voiced. The default value is chosen on the speech and the singing
-    # voice of pitch-benchmark (examples/pitch_benchmark), where 0.1 is the best on
-    # both splits, while RVC uses 0.03.
-    voicing_threshold: float = 0.1
+    # regarded as voiced. The default value is that of RVC.
+    voicing_threshold: float = 0.03
 
     device: str = "auto"  # The device of PyTorch, where 'auto' prefers a GPU.
 
@@ -432,7 +407,11 @@ class RmvpeAlgorithm(BaseAlgorithm):
         )
         model.load_state_dict(state)
         self.model = model.to(config.device).eval()
-        self.mel_basis = self.torch.from_numpy(mel_filterbank()).to(config.device)
+        # The settings of RVC, i.e., the HTK formula with the Slaney normalization.
+        mel_basis = mel_filterbank(
+            SAMPLE_RATE, _N_FFT, _N_MELS, (_MEL_FMIN, _MEL_FMAX), htk=True
+        )
+        self.mel_basis = self.torch.from_numpy(mel_basis).to(config.device)
         self.window = self.torch.hann_window(_N_FFT, device=config.device)
 
     def _salience(self, data: np.ndarray) -> np.ndarray:

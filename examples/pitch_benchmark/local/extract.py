@@ -2,7 +2,7 @@
 
 The settings are as follows, where the first pass uses the fixed search range.
 
-- single: the single pass with the fixed search range.
+- one-pass: the one-pass tracking with the fixed search range.
 - two-pass-1st: the two-pass tracking taking the voicing from the first pass.
 - two-pass-2nd: the two-pass tracking taking the voicing from the second pass.
 """
@@ -24,7 +24,7 @@ FRAME_PERIOD = 4.0
 # The fixed search range in Hz, which is also used in the first pass.
 F0_RANGE = (40.0, 800.0)
 
-SETTINGS = ("single", "two-pass-1st", "two-pass-2nd")
+SETTINGS = ("one-pass", "two-pass-1st", "two-pass-2nd")
 
 # The panel of the clean audio in each split, where the audio of the valid split is
 # only scaled in level.
@@ -54,7 +54,7 @@ def create_two_pass(setting: str) -> pg.TwoPass | None:
     Returns
     -------
     out : TwoPass | None
-        The settings of the two-pass tracking, or None for the single pass.
+        The settings of the two-pass tracking, or None for the one-pass tracking.
 
     Raises
     ------
@@ -64,7 +64,7 @@ def create_two_pass(setting: str) -> pg.TwoPass | None:
     """
     if setting not in SETTINGS:
         raise ValueError(f"Unsupported setting '{setting}'. Choose from {SETTINGS}.")
-    if setting == "single":
+    if setting == "one-pass":
         return None
     return pg.TwoPass(fmin=F0_RANGE[0], fmax=F0_RANGE[1])
 
@@ -101,7 +101,7 @@ def create_tracker(
 
     """
     policy = None
-    if setting != "single":
+    if setting != "one-pass":
         voicing = cast(VoicingSource, setting.removeprefix("two-pass-"))
         policy = pg.TwoPassPolicy(enabled=True, voicing_from=voicing)
     return utils.trackers.create_tracker(

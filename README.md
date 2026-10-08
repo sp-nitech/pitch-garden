@@ -26,19 +26,23 @@ pip install "pitch-garden[all]"  # All trackers
 
 | Name | Neural | F0 Range [Hz] | Voicing Threshold | Paper | Source |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `crepe` | ✓ | 32 – 2006 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/1802.06182) | [GitHub](https://github.com/maxrmorrison/torchcrepe) |
+| `crepe` | ✓ | 32 – 2006 | 0.1 – 0.4 | [arXiv](https://arxiv.org/abs/1802.06182) | [GitHub](https://github.com/maxrmorrison/torchcrepe) |
 | `dio` | | 10 – Nyquist | 0.2 – 0.02 | [AES E-Library](https://aes.org/publications/elibrary/elibrary-page/?id=15165) | [GitHub](https://github.com/mmorise/World) |
-| `fcn-f0` | ✓ | 30 – 1000 | 0.0 – 1.0 | [ISCA Archive](https://www.isca-archive.org/interspeech_2019/ardaillon19_interspeech.html) | [GitHub](https://github.com/ardaillon/FCN-f0) |
+| `fcn-f0` | ✓ | 30 – 1000 | 0.2 – 0.6 | [ISCA Archive](https://www.isca-archive.org/interspeech_2019/ardaillon19_interspeech.html) | [GitHub](https://github.com/ardaillon/FCN-f0) |
+| `fcpe` | ✓ | 33 – 1975 | 0.0 – 0.1 | [arXiv](https://arxiv.org/abs/2509.15140) | [GitHub](https://github.com/CNChTu/FCPE) |
+| `harmof0` | ✓ | 28 – 4371 | 0.5 – 0.9 | [arXiv](https://arxiv.org/abs/2205.01019) | [GitHub](https://github.com/WX-Wei/HarmoF0) |
 | `harvest` | | 10 – Nyquist | 0.2 – 0.0 | [ISCA Archive](https://www.isca-archive.org/interspeech_2017/morise17b_interspeech.html) | [GitHub](https://github.com/mmorise/World) |
-| `pesto` | ✓ | 28 – 3452 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2309.02265) | [GitHub](https://github.com/SonyCSLParis/pesto) |
+| `pesto` | ✓ | 28 – 3452 | 0.0 – 0.2 | [arXiv](https://arxiv.org/abs/2309.02265) | [GitHub](https://github.com/SonyCSLParis/pesto) |
+| `pienet` | ✓ | 50 – 500 | 0.5 – 1.0 | [IEEE Xplore](https://ieeexplore.ieee.org/document/8683041) | [GitHub](https://github.com/mairaksi/PiENet) |
 | `pyin` | | 16 – 8000 | | [IEEE Xplore](https://ieeexplore.ieee.org/document/6853678) | [GitHub](https://github.com/librosa/librosa) |
 | `rapt` | | 10 – Nyquist | 0.7 – -0.6 | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
 | `reaper` | | 10 – Nyquist | 1.6 – -0.5 | | [GitHub](https://github.com/google/reaper) |
-| `rmvpe` | ✓ | 32 – 2005 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2306.15412) | [GitHub](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) |
+| `rmvpe` | ✓ | 32 – 2005 | 0.0 – 0.3 | [arXiv](https://arxiv.org/abs/2306.15412) | [GitHub](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) |
 | `straight` | | 40 – Nyquist | | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/takenori-y/pylstraight) |
-| `swift-f0` | ✓ | 47 – 2093 | 0.0 – 1.0 | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
+| `swift-f0` | ✓ | 47 – 2093 | 0.1 – 0.5 | [arXiv](https://arxiv.org/abs/2508.18440) | [GitHub](https://github.com/lars76/swift-f0) |
 | `swipe` | | 10 – Nyquist | 0.2 – 0.5 | [EDU](https://scholarsmine.mst.edu/cgi/viewcontent.cgi?article=8070&context=ele_comeng_facwork) | [GitHub](https://github.com/kylebgorman/swipe) |
-| `yin` | | 16 – 8000 | 0.0 – 1.0 | [JASA](https://doi.org/10.1121/1.1458024) | [GitHub](https://github.com/librosa/librosa) |
+| `yaapt` | | 10 – Nyquist | 0.1 – 1.0 | [IEEE Xplore](https://ieeexplore.ieee.org/document/5743729) | [GitHub](https://github.com/bjbschmitt/AMFM_decompy) |
+| `yin` | | 16 – 8000 | 0.3 – 0.6 | [JASA](https://doi.org/10.1121/1.1458024) | [GitHub](https://github.com/librosa/librosa) |
 
 The F0 range is the search range that can be specified, and the accuracy near its ends depends on the algorithm.
 `dio`, `harvest`, `rapt`, `reaper`, and `swipe` are based on the implementations in [SPTK](https://github.com/sp-nitech/SPTK), and their outputs are compatible with the `pitch` command of SPTK.
@@ -47,8 +51,10 @@ The F0 range is the search range that can be specified, and the accuracy near it
 
 | Name | Neural | Paper | Source | Reason |
 | :--- | :---: | :---: | :---: | :--- |
+| Basic Pitch | ✓ | [arXiv](https://arxiv.org/abs/2203.09893) | [GitHub](https://github.com/spotify/basic-pitch) | Designed for polyphonic transcription |
 | PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate than `fcn-f0` |
-| Praat (Parselmouth) | | [UvA](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
+| Praat (Parselmouth) | | [EDU](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
+| SPICE | ✓ | [arXiv](https://arxiv.org/abs/1910.11664) | [Kaggle](https://www.kaggle.com/models/google/spice) | No PyTorch weights available |
 
 ## Usage
 

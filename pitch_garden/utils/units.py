@@ -83,35 +83,62 @@ def midi_to_hz(midi: ArrayLike) -> np.ndarray:
     return cents_to_hz(100 * (np.asarray(midi) - 69), reference=440.0)
 
 
-def hz_to_mel(frequency: ArrayLike) -> np.ndarray:
-    """Convert frequencies in Hz into mels in the HTK formula.
+# The constants of the Slaney formula, which is linear below 1 kHz and logarithmic
+# above it as in the Auditory Toolbox and librosa.
+_SLANEY_HZ_PER_MEL = 200.0 / 3
+_SLANEY_MIN_LOG_HZ = 1000.0
+_SLANEY_MIN_LOG_MEL = _SLANEY_MIN_LOG_HZ / _SLANEY_HZ_PER_MEL
+_SLANEY_LOG_STEP = np.log(6.4) / 27.0
+
+
+def hz_to_mel(frequency: ArrayLike, htk: bool = True) -> np.ndarray:
+    """Convert frequencies in Hz into mels.
 
     Parameters
     ----------
     frequency : ArrayLike
         The frequencies in Hz.
 
+    htk : bool, optional
+        If True, the HTK formula, i.e., 2595 * log10(1 + frequency / 700), is used.
+        Otherwise, the Slaney formula is used as the default of librosa.
+
     Returns
     -------
     out : np.ndarray
-        The mels, i.e., 2595 * log10(1 + frequency / 700).
+        The mels.
 
     """
-    return 2595.0 * np.log10(1.0 + np.asarray(frequency) / 700.0)
+    frequency = np.asarray(frequency, dtype=np.float64)
+    if htk:
+        return 2595.0 * np.log10(1.0 + frequency / 700.0)
+    linear = frequency / _SLANEY_HZ_PER_MEL
+    safe = np.maximum(frequency, _SLANEY_MIN_LOG_HZ)
+    log = _SLANEY_MIN_LOG_MEL + np.log(safe / _SLANEY_MIN_LOG_HZ) / _SLANEY_LOG_STEP
+    return np.where(frequency < _SLANEY_MIN_LOG_HZ, linear, log)
 
 
-def mel_to_hz(mel: ArrayLike) -> np.ndarray:
-    """Convert mels in the HTK formula into frequencies in Hz.
+def mel_to_hz(mel: ArrayLike, htk: bool = True) -> np.ndarray:
+    """Convert mels into frequencies in Hz.
 
     Parameters
     ----------
     mel : ArrayLike
         The mels.
 
+    htk : bool, optional
+        If True, the HTK formula, i.e., 700 * (10 ** (mel / 2595) - 1), is used.
+        Otherwise, the Slaney formula is used as the default of librosa.
+
     Returns
     -------
     out : np.ndarray
-        The frequencies in Hz, i.e., 700 * (10 ** (mel / 2595) - 1).
+        The frequencies in Hz.
 
     """
-    return 700.0 * (10.0 ** (np.asarray(mel) / 2595.0) - 1.0)
+    mel = np.asarray(mel, dtype=np.float64)
+    if htk:
+        return 700.0 * (10.0 ** (mel / 2595.0) - 1.0)
+    linear = mel * _SLANEY_HZ_PER_MEL
+    log = _SLANEY_MIN_LOG_HZ * np.exp(_SLANEY_LOG_STEP * (mel - _SLANEY_MIN_LOG_MEL))
+    return np.where(mel < _SLANEY_MIN_LOG_MEL, linear, log)

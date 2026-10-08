@@ -38,7 +38,7 @@ class SwiftF0Config(AlgorithmConfig):
     """Configuration of SwiftF0."""
 
     # The frames whose confidence is greater than or equal to the threshold are
-    # regarded as voiced.
+    # regarded as voiced. The default value is that of swift-f0.
     voicing_threshold: float = 0.5
 
     # The number of CPU threads used by ONNX Runtime for inference. If None, the

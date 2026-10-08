@@ -41,13 +41,13 @@ extract() {
     done
 }
 
-# Table 1: the single pass on the test split.
-extract test single
-python local/score.py "$db" "$exp/test" --split test --settings single \
-    --readme README.md --section single
+# Table 1: the one-pass tracking on the test split.
+extract test one-pass
+python local/score.py "$db" "$exp/test" --split test --settings one-pass \
+    --readme README.md --section one-pass
 
 # Table 2: the settings of the two-pass tracking on the speech of both splits.
-settings="single two-pass-1st two-pass-2nd"
+settings="one-pass two-pass-1st two-pass-2nd"
 for split in valid test; do
     for setting in $settings; do
         extract "$split" "$setting"
@@ -56,5 +56,10 @@ for split in valid test; do
     python local/score.py "$db" "$exp/$split" --split "$split" --settings $settings \
         --speech_only --readme README.md --section "comparison_$split"
 done
+
+# Table 3: the best setting of each tracker averaged over both splits.
+# shellcheck disable=SC2086
+python local/summarize.py "$db" "$exp" --splits valid test --settings $settings \
+    --readme README.md --section summary
 
 echo "run.sh: successfully finished"
