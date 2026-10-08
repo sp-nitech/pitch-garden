@@ -52,9 +52,13 @@ The F0 range is the search range that can be specified, and the accuracy near it
 | Name | Neural | Paper | Source | Reason |
 | :--- | :---: | :---: | :---: | :--- |
 | Basic Pitch | ✓ | [arXiv](https://arxiv.org/abs/2203.09893) | [GitHub](https://github.com/spotify/basic-pitch) | Designed for polyphonic transcription |
+| JDCNet | ✓ | [MDPI](https://doi.org/10.3390/app9071324) | [GitHub](https://github.com/keums/melodyExtraction_JDC) | PyTorch versions are unlicensed |
+| Kaldi Pitch | | [IEEE Xplore](https://doi.org/10.1109/ICASSP.2014.6854049) | [GitHub](https://github.com/kaldi-asr/kaldi) | No maintained Python implementation |
+| MPM | | [EDU](https://www.cs.otago.ac.nz/research/publications/oucs-2008-03.pdf) | | Similar to `yin` |
 | PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate than `fcn-f0` |
 | Praat (Parselmouth) | | [EDU](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
 | SPICE | ✓ | [arXiv](https://arxiv.org/abs/1910.11664) | [Kaggle](https://www.kaggle.com/models/google/spice) | No PyTorch weights available |
+| SRH | | [ISCA Archive](https://www.isca-archive.org/interspeech_2011/drugman11_interspeech.html) | | Sensitive to the search range |
 
 ## Usage
 
