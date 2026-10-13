@@ -1,0 +1,138 @@
+name: package
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - "**"
+
+  # Called by the release workflow before publishing the packages.
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  # Ignore the packages uploaded recently to mitigate supply chain attacks.
+  PIP_UPLOADED_PRIOR_TO: P14D
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      max-parallel: 4
+      matrix:
+        python:
+          - "3.12"
+          - "3.14"
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y libsndfile1
+          python -m pip install uv
+
+      - name: Install
+        run: make PYTHON_VERSION=${{ matrix.python }} TORCH=cpu setup tool
+
+      - name: Check
+        run: make check
+
+      - name: Cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # The weights of the neural trackers downloaded by PyTorch, which are
+          # identified by the URLs and the hashes in the sources.
+          path: ~/.cache/torch/hub/checkpoints
+          key: torch-weights-${{ hashFiles('pitch_garden/algorithms/*.py') }}
+
+      - name: Test
+        run: make test
+
+      - name: Test binding
+        run: make -C bindings/sptk test
+
+  wheels:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Dependencies
+        run: python -m pip install cibuildwheel
+
+      - name: Build
+        run: python -m cibuildwheel bindings/sptk --output-dir wheelhouse
+
+      - name: Upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sptk-wheel-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  dist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Dependencies
+        run: python -m pip install build twine
+
+      - name: Build
+        run: |
+          python -m build --sdist bindings/sptk --outdir sptk-dist
+          python -m build . --outdir dist
+          python -m twine check --strict sptk-dist/* dist/*
+
+      - name: Upload sdist of pitch-garden-sptk
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sptk-sdist
+          path: sptk-dist/*
+
+      - name: Upload pitch-garden
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: garden-dist
+          path: dist/*

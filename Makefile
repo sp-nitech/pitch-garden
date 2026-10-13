@@ -31,21 +31,21 @@ check: tool
 	$(UV_RUN) pyright $(SOURCES)
 	$(UV_RUN) cmake-format --check bindings/sptk/CMakeLists.txt
 	$(UV_RUN) mdformat --check *.md bindings/sptk/*.md examples/*/README.md
-	./tools/pinact/pinact run --check .github/workflows/*.yml
+	./tools/pinact/pinact run --check .github/workflows/*.yaml
 	./tools/shellcheck/shellcheck examples/*/run.sh
 	./tools/shfmt/shfmt -i 4 -d examples/*/run.sh
 	./tools/taplo/taplo fmt --check *.toml bindings/sptk/*.toml
-	./tools/yamlfmt/yamlfmt --lint .yamlfmt.yml .github/workflows/*.yml configs/*.yaml
+	./tools/yamlfmt/yamlfmt --lint .yamlfmt.yaml .github/workflows/*.yaml configs/*.yaml
 
 format: tool
 	$(UV_RUN) ruff check --fix $(SOURCES)
 	$(UV_RUN) ruff format $(SOURCES)
 	$(UV_RUN) cmake-format -i bindings/sptk/CMakeLists.txt
 	$(UV_RUN) mdformat *.md bindings/sptk/*.md examples/*/README.md
-	./tools/pinact/pinact run -u --min-age 14 .github/workflows/*.yml
+	./tools/pinact/pinact run -u --min-age 14 .github/workflows/*.yaml
 	./tools/shfmt/shfmt -i 4 -w examples/*/run.sh
 	./tools/taplo/taplo fmt *.toml bindings/sptk/*.toml
-	./tools/yamlfmt/yamlfmt .yamlfmt.yml .github/workflows/*.yml configs/*.yaml
+	./tools/yamlfmt/yamlfmt .yamlfmt.yaml .github/workflows/*.yaml configs/*.yaml
 
 test:
 	[ -n "$(MODULE)" ] && module=$$(find tests -name "test_$(MODULE).py") || module="$(PROJECT) tests"; \
