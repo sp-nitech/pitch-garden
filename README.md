@@ -178,10 +178,10 @@ print(result.pass1.pitch)
 
 The settings are given by a YAML file, and the input and the output directory are given by the command line.
 The input is an audio file, a directory searched recursively, or a text file listing audio files line by line.
-See [configs/rapt.yaml](configs/rapt.yaml) for all settings, [configs/voting.yaml](configs/voting.yaml) for multiple trackers, and [configs/two_pass.yaml](configs/two_pass.yaml) for the two-pass tracking.
+See [configs/single.yaml](configs/single.yaml) for all settings, [configs/multiple.yaml](configs/multiple.yaml) for multiple trackers, and [configs/two-pass.yaml](configs/two-pass.yaml) for the two-pass tracking.
 
 ```sh
-pitch-garden configs/voting.yaml data/wav -o exp/f0
+pitch-garden configs/multiple.yaml data/wav -o exp/f0
 ```
 
 The main settings for the above use cases are as follows:

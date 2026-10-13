@@ -31,7 +31,6 @@ class OutputSettings:
 
     format: OutputFormat = "log"
     file_type: FileType = "double"
-    sample_rate: int | None = None  # The sample rate for the 'inverse' format.
     save_each: bool = False  # Whether to save the outputs of the trackers.
 
 
@@ -87,10 +86,10 @@ class TwoPassSettings:
     fmin: float = 40.0  # The first-pass range in Hz.
     fmax: float = 2000.0
     estimator: EstimatorSettings = field(default_factory=EstimatorSettings)
-    source: str = "pitch"  # 'pitch' (the final contour) or the name of a tracker.
+    range_from: str | None = None  # The tracker giving the range (None: the final).
     scope: Literal["utterance", "group", "global"] = "utterance"
     group_by: GroupBySettings = field(default_factory=GroupBySettings)
-    clip_out_of_range: bool = True
+    clip_out_of_range: bool = True  # Only for `supports_f0_range=False`.
 
 
 @dataclass
@@ -257,7 +256,7 @@ def _build_two_pass(config: Config, names: list[str]) -> TwoPass | None:
     try:
         two_pass = TwoPass(
             estimator=estimator,
-            source=r.source,
+            range_from=r.range_from,
             fmin=r.fmin,
             fmax=r.fmax,
             clip_out_of_range=r.clip_out_of_range,

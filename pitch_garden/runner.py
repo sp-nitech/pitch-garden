@@ -184,7 +184,6 @@ class _Writer:
             path,
             output_format=output.format,
             file_type=output.file_type,
-            sample_rate=output.sample_rate,
         )
 
     def write(self, input_file: str, result: PipelineResult, prefix: str = "") -> None:

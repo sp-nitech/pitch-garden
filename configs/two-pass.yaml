@@ -1,0 +1,33 @@
+# A configuration for the two-pass tracking of RAPT. The tracker is first run with
+# a wide F0 range, and then rerun with the range estimated from its output. See
+# single.yaml for the other settings.
+
+frame_period: 5.0
+
+output:
+  format: linear
+  file_type: npz
+  save_each: false # Save the results of the first pass as well.
+
+trackers:
+  - algorithm: rapt
+    params:
+      voicing_threshold: 0.0
+    two_pass: null # null: the recommended settings of the algorithm.
+    # two_pass:
+    #   enabled: true # Whether the tracker is rerun in the second pass.
+    #   voicing_from: 2nd # 1st | 2nd: the pass giving the voicing decisions.
+
+two_pass:
+  fmin: 40.0 # The first-pass range in Hz.
+  fmax: 2000.0
+  estimator:
+    type: log-normal # exp(mean +/- gamma * std-dev) of the voiced log F0
+    params:
+      gamma: 3.0
+      min_octaves: 0.5 # The minimum width of the range.
+  scope: utterance # utterance | group | global
+  group_by: # Used when scope is 'group'.
+    type: dirname # dirname: the name of the parent directory | map
+    level: 1 # 1: the parent directory, 2: the grandparent directory, ...
+    path: null # The file of '<basename> <group>' lines when type is 'map'.

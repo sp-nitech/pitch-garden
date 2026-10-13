@@ -63,20 +63,22 @@ class TwoPass:
 
     In the first pass, the trackers supporting the search range are run with the
     wide range [fmin, fmax]. The range is then estimated from the distribution of
-    voiced F0 of `source`. In the second pass, the trackers supporting the search
-    range are rerun with the estimated range if their `two_pass_policy` enables it,
-    and the outputs of the other trackers are reused, where the out-of-range frames
-    of the trackers not supporting the search range are unvoiced if
-    `clip_out_of_range`. Whether each tracker is rerun and which pass gives its
-    voicing decisions are given by `Tracker.two_pass_policy`.
+    voiced F0 of `range_from`. In the second pass, the trackers supporting the
+    search range are rerun with the estimated range if their `two_pass_policy`
+    enables it, and the outputs of the other trackers are reused. Whether each
+    tracker is rerun and which pass gives its voicing decisions are given by
+    `Tracker.two_pass_policy`. The out-of-range frames of the trackers not
+    supporting the search range, i.e., `supports_f0_range=False`, are unvoiced if
+    `clip_out_of_range`, which does not affect the built-in algorithms since all of
+    them support the range.
 
     """
 
     estimator: BaseRangeEstimator = field(default_factory=LogNormalRangeEstimator)
-    source: str = "pitch"  # 'pitch' (the final contour) or the name of a tracker.
+    range_from: str | None = None  # The tracker giving the range (None: the final).
     fmin: float = 40.0  # The lower bound of the first-pass range in Hz.
     fmax: float = 2000.0  # The upper bound of the first-pass range in Hz.
-    clip_out_of_range: bool = True
+    clip_out_of_range: bool = True  # Only for `supports_f0_range=False`.
 
     def __post_init__(self) -> None:
         """Validate the settings.
@@ -104,17 +106,19 @@ class TwoPass:
         Raises
         ------
         ValueError
-            If the source is unavailable.
+            If the contour giving the range is unavailable.
 
         """
-        if self.source == "pitch" and not has_voter and 1 < len(names):
+        if self.range_from is None:
+            if not has_voter and 1 < len(names):
+                raise ValueError(
+                    "A voter or range_from is required to estimate the F0 range from "
+                    "multiple trackers."
+                )
+        elif self.range_from not in names:
             raise ValueError(
-                "A voter is required when the source of multiple trackers is 'pitch'."
-            )
-        if self.source != "pitch" and self.source not in names:
-            raise ValueError(
-                f"Unknown source '{self.source}' for the F0 range. "
-                f"Choose 'pitch' or one of {list(names)}."
+                f"Unknown tracker '{self.range_from}' in range_from. "
+                f"Choose one of {list(names)}."
             )
 
 
@@ -474,20 +478,21 @@ class Pipeline:
             If the two-pass tracking is disabled.
 
         ValueError
-            If the source contour is not found in the results.
+            If the contour giving the range is not found in the results.
 
         """
         if self.two_pass is None:
             raise RuntimeError("The two-pass tracking is disabled.")
-        source = self.two_pass.source
+        name = self.two_pass.range_from
         pitches = []
         for r in results:
-            pitch = r.pitch if source == "pitch" else r.each.get(source)
+            pitch = r.pitch if name is None else r.each.get(name)
             if pitch is None:
-                if source in r.errors:
-                    # The failed source is skipped, which may lead to the fallback.
+                if name is not None and name in r.errors:
+                    # The failed tracker is skipped, which may lead to the fallback.
                     continue
-                raise ValueError(f"The source '{source}' is not found in the results.")
+                target = "The final contour" if name is None else f"Tracker '{name}'"
+                raise ValueError(f"{target} is not found in the results.")
             pitches.append(pitch)
         return estimate_f0_range(
             pitches,

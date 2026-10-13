@@ -1,0 +1,27 @@
+# A configuration voting the outputs of multiple trackers. See single.yaml for the
+# other settings.
+
+frame_period: 5.0
+
+output:
+  format: log
+  file_type: double
+  save_each: true # Save the outputs of the trackers as well.
+
+trackers:
+  - algorithm: rapt
+  - algorithm: swift-f0
+  - algorithm: rmvpe
+    params:
+      device: auto # auto: a GPU if available | cpu | cuda
+  # The same algorithm is used with different parameters by different names.
+  - algorithm: harvest
+    name: harvest-strict
+    params:
+      voicing_threshold: 0.0
+
+voter:
+  type: median # median | aligned
+  params:
+    filter_length: 3 # The length of the temporal window in frames.
+  state: null # The JSON file of the learned parameters of the voter.

@@ -135,9 +135,7 @@ class Pitch:
         """
         return 0 < self.f0
 
-    def to(
-        self, output_format: OutputFormat | str, sample_rate: int | None = None
-    ) -> np.ndarray:
+    def to(self, output_format: OutputFormat | str) -> np.ndarray:
         """Convert the F0 contour to the specified format.
 
         Parameters
@@ -145,11 +143,8 @@ class Pitch:
         output_format : ['linear', 'log', 'inverse']
             The output format. 'linear' is F0 in Hz (unvoiced: 0), 'log' is log F0
             (unvoiced: -1e10), and 'inverse' is the pitch period in samples, i.e.,
-            Fs/F0 (unvoiced: 0). These are compatible with SPTK.
-
-        sample_rate : int | None, optional
-            The sample rate used for the 'inverse' format. If None, the sample rate
-            of the source audio is used.
+            Fs/F0 (unvoiced: 0), where Fs is the sample rate of the source audio.
+            These are compatible with SPTK.
 
         Returns
         -------
@@ -170,9 +165,8 @@ class Pitch:
             out[voiced] = np.log(self.f0[voiced])
             return out
         if output_format == "inverse":
-            fs = self.sample_rate if sample_rate is None else sample_rate
             out = np.zeros_like(self.f0)
-            out[voiced] = fs / self.f0[voiced]
+            out[voiced] = self.sample_rate / self.f0[voiced]
             return out
         raise ValueError(
             f"Unsupported output format '{output_format}'. "
@@ -306,7 +300,6 @@ class Pitch:
         path: str,
         output_format: OutputFormat | str = "linear",
         file_type: FileType | str = "npz",
-        sample_rate: int | None = None,
     ) -> None:
         """Save the F0 contour to a file.
 
@@ -322,16 +315,13 @@ class Pitch:
             The file type. 'float' and 'double' are headerless binary files that can
             be directly processed by SPTK.
 
-        sample_rate : int | None, optional
-            The sample rate used for the 'inverse' format.
-
         Raises
         ------
         ValueError
             If the output format or the file type is not supported.
 
         """
-        data = self.to(output_format, sample_rate=sample_rate)
+        data = self.to(output_format)
         if file_type == "npz":
             np.savez_compressed(
                 path,

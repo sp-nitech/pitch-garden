@@ -1,0 +1,26 @@
+# A configuration running a single tracker (RAPT).
+
+subdir_offset: null # Keep the subdirectories after this depth of the input path.
+frame_period: 5.0 # The frame period in milliseconds.
+num_workers: null # The number of worker processes (null: automatic).
+on_error: skip # skip: exclude a failed tracker with a warning | raise
+
+# The format of headerless raw files (little-endian). Raw files are not read
+# without this section.
+# raw:
+#   sample_rate: 16000 # The sample rate in Hz (required).
+#   data_type: s # The data type of SPTK x2x: c, C, s, S, h, H, i, I, l, L, f, or d.
+#   num_channels: 1 # The number of interleaved channels, which are averaged.
+#   extensions: # The files with these extensions are read as raw.
+#     - .raw
+
+output:
+  format: log # linear | log | inverse (Fs/F0)
+  file_type: double # npz | float | double
+
+trackers:
+  - algorithm: rapt
+    params:
+      fmin: 60.0 # The F0 search range in Hz.
+      fmax: 400.0
+      voicing_threshold: 0.0
