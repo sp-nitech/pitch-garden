@@ -59,7 +59,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         logger.error(f"Invalid configuration: {e}")
         sys.exit(2)
 
-    num_errors = run_batch(config, args.source, args.output_dir, quiet=args.quiet)
+    try:
+        num_errors = run_batch(config, args.source, args.output_dir, quiet=args.quiet)
+    except ValueError as e:
+        logger.error(f"Invalid input: {e}")
+        sys.exit(2)
     if num_errors > 0:
         logger.error(f"{num_errors} files were skipped due to errors.")
         sys.exit(1)

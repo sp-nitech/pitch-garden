@@ -32,7 +32,6 @@ its dependencies, e.g., librosa and resampy.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, replace
 from typing import Any, Literal, cast, get_args
 
@@ -49,7 +48,12 @@ from ._salience import (
     mask_out_of_range,
     viterbi_path,
 )
-from ._torch import import_torch, resolve_torch_device
+from ._torch import (
+    download_weights,
+    import_torch,
+    resolve_torch_device,
+    with_num_threads,
+)
 from ._utils import frame_audio
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
@@ -416,15 +420,13 @@ class CrepeAlgorithm(BaseAlgorithm):
         config = cast(CrepeConfig, self.config)
         if config.weights_path is not None:
             return config.weights_path
-        sha256 = _WEIGHTS_SHA256[config.model]
-        directory = os.path.join(self.torch.hub.get_dir(), "checkpoints")
-        path = os.path.join(directory, f"crepe-{config.model}-{sha256[:8]}.pth")
-        if not os.path.exists(path):
-            os.makedirs(directory, exist_ok=True)
-            self.torch.hub.download_url_to_file(
-                _WEIGHTS_URL.format(config.model), path, hash_prefix=sha256
-            )
-        return path
+        return download_weights(
+            self.torch,
+            _WEIGHTS_URL.format(config.model),
+            _WEIGHTS_SHA256[config.model],
+            f"crepe-{config.model}",
+            ".pth",
+        )
 
     def load(self) -> None:
         """Load the model.
@@ -439,8 +441,6 @@ class CrepeAlgorithm(BaseAlgorithm):
             return
         self.torch = import_torch("CREPE")
         config = cast(CrepeConfig, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         model = _create_model(self.torch, config.model)
         state = self.torch.load(
             self._weights_path(), map_location=config.device, weights_only=True
@@ -462,6 +462,7 @@ class CrepeAlgorithm(BaseAlgorithm):
                 outputs.append(self.model(inputs.to(config.device)).cpu().numpy())
         return np.concatenate(outputs).astype(np.float64)
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:

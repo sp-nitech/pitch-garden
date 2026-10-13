@@ -37,7 +37,7 @@ def prepare(
     Raises
     ------
     ValueError
-        If the frame periods are different.
+        If the frame periods are different or the mask is too short.
 
     """
     if isinstance(reference, Pitch) and isinstance(estimate, Pitch):
@@ -52,7 +52,12 @@ def prepare(
     ref = ref[:n].astype(np.float64)
     est = est[:n].astype(np.float64)
     if mask is not None:
-        mask = np.asarray(mask, dtype=bool)[:n]
+        mask = np.asarray(mask, dtype=bool)
+        if len(mask) < n:
+            raise ValueError(
+                f"The mask has {len(mask)} frames, fewer than the {n} frames evaluated."
+            )
+        mask = mask[:n]
         ref, est = ref[mask], est[mask]
     return ref, est
 

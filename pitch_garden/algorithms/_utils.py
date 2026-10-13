@@ -56,9 +56,12 @@ def frame_audio(
 
 
 def mask_bins_out_of_range(
-    salience: np.ndarray, frequencies: np.ndarray, f0_range: tuple[float, float]
+    salience: np.ndarray,
+    frequencies: np.ndarray,
+    f0_range: tuple[float, float],
+    fill: float = -np.inf,
 ) -> np.ndarray:
-    """Mask the pitch bins out of the search range with -inf.
+    """Mask the pitch bins out of the search range.
 
     The bin nearest to the center of the range on the log scale is kept, so that a
     range narrower than the interval of the bins still has a bin.
@@ -74,6 +77,10 @@ def mask_bins_out_of_range(
     f0_range : tuple[float, float]
         The F0 search range in Hz.
 
+    fill : float, optional
+        The value of the masked bins, e.g., 0 for the salience averaged around the
+        peak.
+
     Returns
     -------
     out : np.ndarray
@@ -83,7 +90,7 @@ def mask_bins_out_of_range(
     outside = (frequencies < f0_range[0]) | (f0_range[1] < frequencies)
     center = np.log(f0_range[0] * f0_range[1]) / 2
     outside[np.argmin(np.abs(np.log(frequencies) - center))] = False
-    return np.where(outside, -np.inf, salience)
+    return np.where(outside, fill, salience)
 
 
 def mel_filterbank(

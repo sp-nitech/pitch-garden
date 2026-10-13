@@ -14,7 +14,7 @@ import numpy as np
 
 from ..interfaces.types import Audio
 from ..utils.units import cents_to_hz, midi_to_hz
-from ._torch import import_torch, resolve_torch_device
+from ._torch import import_torch, resolve_torch_device, with_num_threads
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
 # The model published by pesto-pitch, whose HCQT covers 251 bins of a third of a
@@ -163,9 +163,6 @@ class PestoAlgorithm(BaseAlgorithm):
         if self.pesto is not None:
             return
         self.torch = import_torch("PESTO")
-        config = cast(PestoConfig, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         self.pesto = _import_pesto()
 
     def _get_model(self, frame_period: float) -> Any:
@@ -176,6 +173,7 @@ class PestoAlgorithm(BaseAlgorithm):
             self.model_frame_period = frame_period
         return self.model
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:

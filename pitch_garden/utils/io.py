@@ -34,7 +34,7 @@ _RAW_TYPES: dict[str, tuple[int, str]] = {
 class RawFormat:
     """The format of headerless raw audio files."""
 
-    sample_rate: int | None = None  # The sample rate in Hz, required to read raw.
+    sample_rate: int  # The sample rate in Hz.
     data_type: RawDataType = "s"  # The data type in the notation of SPTK x2x.
     num_channels: int = 1  # The number of interleaved channels, which are averaged.
     extensions: list[str] = field(default_factory=lambda: [".raw"])
@@ -57,7 +57,7 @@ class RawFormat:
         return ext in [e.lower() for e in self.extensions]
 
 
-def load_raw(
+def _load_raw(
     path: str,
     sample_rate: int,
     data_type: RawDataType | str,
@@ -142,6 +142,7 @@ def load_audio(path: str, raw: RawFormat | None = None) -> Audio:
 
     raw : RawFormat | None, optional
         The format of raw files. The files with its extensions are read as raw.
+        If None, no file is read as raw.
 
     Returns
     -------
@@ -151,15 +152,20 @@ def load_audio(path: str, raw: RawFormat | None = None) -> Audio:
     Raises
     ------
     ValueError
-        If the sample rate of a raw file is not given.
+        If the file cannot be read as audio without the format of raw files.
 
     """
-    raw = RawFormat() if raw is None else raw
-    if raw.is_raw(path):
-        if raw.sample_rate is None:
-            raise ValueError(f"The sample_rate is required to read the raw {path}.")
-        return load_raw(path, raw.sample_rate, raw.data_type, raw.num_channels)
+    if raw is not None and raw.is_raw(path):
+        return _load_raw(path, raw.sample_rate, raw.data_type, raw.num_channels)
 
-    x, sr = sf.read(path, dtype="float64", always_2d=True)
+    try:
+        x, sr = sf.read(path, dtype="float64", always_2d=True)
+    except (TypeError, sf.LibsndfileError) as e:
+        if raw is not None:
+            raise
+        raise ValueError(
+            f"Failed to read {path} as audio. Give a RawFormat (the raw section of "
+            "the configuration) to read it as headerless raw audio."
+        ) from e
     data = np.asarray(x, dtype=np.float64)
     return Audio(data.mean(axis=1), int(sr))

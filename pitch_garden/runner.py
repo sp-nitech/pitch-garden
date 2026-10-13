@@ -149,10 +149,34 @@ class _Writer:
             )
         return str(Path(*dirs[offset:])) if dirs[offset:] else ""
 
+    def _relative_path(self, input_file: str) -> str:
+        return os.path.join(
+            self._subdir(input_file), f"{_basename(input_file)}.{self.ext}"
+        )
+
+    def check_outputs(self, input_files: Sequence[str]) -> None:
+        """Check that the input files are saved to different outputs.
+
+        Raises
+        ------
+        ValueError
+            If multiple input files are saved to the same output.
+
+        """
+        seen: dict[str, str] = {}
+        for file in input_files:
+            path = self._relative_path(file)
+            if path in seen:
+                raise ValueError(
+                    f"{seen[path]} and {file} are saved to the same output '{path}'. "
+                    "Give subdir_offset to keep their subdirectories."
+                )
+            seen[path] = file
+
     def _path(self, prefix: str, input_file: str) -> str:
-        output_dir = os.path.join(self.output_dir, prefix, self._subdir(input_file))
-        os.makedirs(output_dir, exist_ok=True)
-        return os.path.join(output_dir, f"{_basename(input_file)}.{self.ext}")
+        path = os.path.join(self.output_dir, prefix, self._relative_path(input_file))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
 
     def _save(self, pitch: Pitch, path: str) -> None:
         output = self.config.output
@@ -211,18 +235,31 @@ def run_batch(
     out : int
         The number of files skipped due to errors.
 
+    Raises
+    ------
+    ValueError
+        If the source is invalid or multiple input files are saved to the same
+        output.
+
     """
-    files = collect_input_files(source, config.raw.extensions)
+    raw = config.raw
+    # Without the format, raw files are collected and fail to be read as audio.
+    files = (
+        collect_input_files(source)
+        if raw is None
+        else collect_input_files(source, raw.extensions)
+    )
     logger.info(f"Found {len(files)} audio files to process.")
     index = {file: i for i, file in enumerate(files)}
     writer = _Writer(config, output_dir)
+    writer.check_outputs(files)
     frame_period = config.frame_period
     num_errors = 0
 
     def process(file: str, func) -> PipelineResult | None:
         nonlocal num_errors
         try:
-            return func(load_audio(file, config.raw))
+            return func(load_audio(file, raw))
         except Exception as e:
             logger.error(f"Error processing file {file}: {e}. Skipping.")
             num_errors += 1

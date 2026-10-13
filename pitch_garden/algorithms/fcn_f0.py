@@ -34,7 +34,6 @@ to PyTorch. The weights in HDF5 are read by h5py.
 from __future__ import annotations
 
 import functools
-import os
 from dataclasses import dataclass, replace
 from typing import Any, Literal, cast, get_args
 
@@ -42,8 +41,13 @@ import numpy as np
 
 from ..interfaces.types import Audio
 from ..utils.units import cents_to_hz, hz_to_cents
-from ._torch import import_torch, resolve_torch_device
-from ._utils import frame_audio
+from ._torch import (
+    download_weights,
+    import_torch,
+    resolve_torch_device,
+    with_num_threads,
+)
+from ._utils import frame_audio, mask_bins_out_of_range
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
 SAMPLE_RATE = 8000  # The sample rate of the models in Hz.
@@ -95,31 +99,6 @@ def _bin_cents() -> np.ndarray:
     )
     cents.setflags(write=False)
     return cents
-
-
-def mask_out_of_range(
-    salience: np.ndarray, f0_range: tuple[float, float]
-) -> np.ndarray:
-    """Zero the salience of the pitch bins out of the search range.
-
-    Parameters
-    ----------
-    salience : np.ndarray
-        The salience of the pitch bins with shape (T, 486).
-
-    f0_range : tuple[float, float]
-        The F0 search range in Hz.
-
-    Returns
-    -------
-    out : np.ndarray
-        The salience, where the bins out of the search range are zero.
-
-    """
-    lower, upper = hz_to_cents(np.asarray(f0_range), REFERENCE)
-    cents = _bin_cents()
-    outside = (cents < lower) | (upper < cents)
-    return np.where(outside, 0.0, salience)
 
 
 def local_average_cents(salience: np.ndarray) -> np.ndarray:
@@ -382,15 +361,13 @@ class FcnF0Algorithm(BaseAlgorithm):
         config = cast(FcnF0Config, self.config)
         if config.weights_path is not None:
             return config.weights_path
-        sha256 = _WEIGHTS_SHA256[config.model]
-        directory = os.path.join(self.torch.hub.get_dir(), "checkpoints")
-        path = os.path.join(directory, f"fcn-f0-{config.model}-{sha256[:8]}.h5")
-        if not os.path.exists(path):
-            os.makedirs(directory, exist_ok=True)
-            self.torch.hub.download_url_to_file(
-                _WEIGHTS_URL.format(config.model), path, hash_prefix=sha256
-            )
-        return path
+        return download_weights(
+            self.torch,
+            _WEIGHTS_URL.format(config.model),
+            _WEIGHTS_SHA256[config.model],
+            f"fcn-f0-{config.model}",
+            ".h5",
+        )
 
     def load(self) -> None:
         """Load the model.
@@ -405,8 +382,6 @@ class FcnF0Algorithm(BaseAlgorithm):
             return
         self.torch = import_torch("FCN-f0")
         config = cast(FcnF0Config, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         weights = _read_weights(self._weights_path())
         model = _create_model(self.torch, config.model, weights)
         self.model = model.to(config.device).eval()
@@ -425,6 +400,7 @@ class FcnF0Algorithm(BaseAlgorithm):
                 outputs.append(self.model(inputs.to(config.device)).cpu().numpy())
         return np.concatenate(outputs).astype(np.float64)
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:
@@ -453,7 +429,10 @@ class FcnF0Algorithm(BaseAlgorithm):
         frames, hop = frame_audio(
             audio.data, SAMPLE_RATE, frame_period, int(config.model)
         )
-        salience = mask_out_of_range(self._infer(frames), f0_range)
+        # The masked bins are zero, which are averaged around the peak.
+        salience = mask_bins_out_of_range(
+            self._infer(frames), cents_to_hz(_bin_cents(), REFERENCE), f0_range, 0.0
+        )
         candidate = cents_to_hz(local_average_cents(salience), REFERENCE)
         score = salience.max(axis=1)
         f0 = np.where(config.voicing_threshold <= score, candidate, 0.0)

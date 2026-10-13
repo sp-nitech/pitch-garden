@@ -24,14 +24,18 @@ is not distributed on PyPI.
 from __future__ import annotations
 
 import functools
-import os
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
 import numpy as np
 
 from ..interfaces.types import Audio
-from ._torch import import_torch, resolve_torch_device
+from ._torch import (
+    download_weights,
+    import_torch,
+    resolve_torch_device,
+    with_num_threads,
+)
 from ._utils import frame_audio, mask_bins_out_of_range
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
@@ -257,14 +261,9 @@ class PiENetAlgorithm(BaseAlgorithm):
         config = cast(PiENetConfig, self.config)
         if config.weights_path is not None:
             return config.weights_path
-        directory = os.path.join(self.torch.hub.get_dir(), "checkpoints")
-        path = os.path.join(directory, f"pienet-gtaug-{_WEIGHTS_SHA256[:8]}.pt")
-        if not os.path.exists(path):
-            os.makedirs(directory, exist_ok=True)
-            self.torch.hub.download_url_to_file(
-                _WEIGHTS_URL, path, hash_prefix=_WEIGHTS_SHA256
-            )
-        return path
+        return download_weights(
+            self.torch, _WEIGHTS_URL, _WEIGHTS_SHA256, "pienet-gtaug", ".pt"
+        )
 
     def load(self) -> None:
         """Load the model.
@@ -279,8 +278,6 @@ class PiENetAlgorithm(BaseAlgorithm):
             return
         self.torch = import_torch("PiENet")
         config = cast(PiENetConfig, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         model = _create_model(self.torch)
         checkpoint = self.torch.load(
             self._weights_path(), map_location=config.device, weights_only=True
@@ -305,6 +302,7 @@ class PiENetAlgorithm(BaseAlgorithm):
                 outputs.append(probabilities[start - first : end - first].cpu().numpy())
         return np.concatenate(outputs).astype(np.float64)
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:

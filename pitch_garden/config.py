@@ -102,7 +102,7 @@ class Config:
     frame_period: float = 5.0  # The frame period in milliseconds.
     num_workers: int | None = None
     on_error: OnError = "skip"  # The behavior on a failure of a tracker.
-    raw: RawFormat = field(default_factory=RawFormat)  # The format of raw files.
+    raw: RawFormat | None = None  # The format of raw files. None reads no raw.
     output: OutputSettings = field(default_factory=OutputSettings)
     voter: VoterSettings | None = field(default_factory=VoterSettings)
     two_pass: TwoPassSettings | None = None  # None disables the two-pass tracking.
@@ -237,8 +237,11 @@ def _build_voter(config: Config, names: list[str]) -> BaseVoter | None:
     except (TypeError, ValueError) as e:
         raise ConfigError(f"voter: {e}") from e
     if config.voter.state is not None:
-        with open(config.voter.state) as f:
-            voter.load_state_dict(json.load(f))
+        try:
+            with open(config.voter.state) as f:
+                voter.load_state_dict(json.load(f))
+        except (OSError, json.JSONDecodeError) as e:
+            raise ConfigError(f"voter.state: {e}") from e
     return voter
 
 
@@ -311,8 +314,11 @@ def _validate(config: Config) -> None:
         raise ConfigError(f"frame_period: {e}") from e
     if config.num_workers is not None and config.num_workers < 1:
         raise ConfigError("num_workers: must be a positive integer.")
-    if config.raw.num_channels < 1:
-        raise ConfigError("raw.num_channels: must be a positive integer.")
+    if config.raw is not None:
+        if config.raw.sample_rate < 1:
+            raise ConfigError("raw.sample_rate: must be a positive integer.")
+        if config.raw.num_channels < 1:
+            raise ConfigError("raw.num_channels: must be a positive integer.")
     r = config.two_pass
     if r is not None:
         if r.scope == "group" and r.group_by.type == "map" and not r.group_by.path:

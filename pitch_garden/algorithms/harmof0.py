@@ -33,14 +33,18 @@ dependencies, e.g., librosa and torchaudio.
 from __future__ import annotations
 
 import functools
-import os
 from dataclasses import dataclass, replace
 from typing import Any, Literal, cast, get_args
 
 import numpy as np
 
 from ..interfaces.types import Audio
-from ._torch import import_torch, resolve_torch_device
+from ._torch import (
+    download_weights,
+    import_torch,
+    resolve_torch_device,
+    with_num_threads,
+)
 from ._utils import frame_audio, mask_bins_out_of_range
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
@@ -349,15 +353,13 @@ class HarmoF0Algorithm(BaseAlgorithm):
         config = cast(HarmoF0Config, self.config)
         if config.weights_path is not None:
             return config.weights_path
-        sha256 = _WEIGHTS_SHA256[config.model]
-        directory = os.path.join(self.torch.hub.get_dir(), "checkpoints")
-        path = os.path.join(directory, f"harmof0-{config.model}-{sha256[:8]}.pth")
-        if not os.path.exists(path):
-            os.makedirs(directory, exist_ok=True)
-            self.torch.hub.download_url_to_file(
-                _WEIGHTS_URL.format(config.model), path, hash_prefix=sha256
-            )
-        return path
+        return download_weights(
+            self.torch,
+            _WEIGHTS_URL.format(config.model),
+            _WEIGHTS_SHA256[config.model],
+            f"harmof0-{config.model}",
+            ".pth",
+        )
 
     def load(self) -> None:
         """Load the model.
@@ -372,8 +374,6 @@ class HarmoF0Algorithm(BaseAlgorithm):
             return
         self.torch = import_torch("HarmoF0")
         config = cast(HarmoF0Config, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         network = _create_network(self.torch)
         state = self.torch.load(
             self._weights_path(), map_location=config.device, weights_only=True
@@ -413,6 +413,7 @@ class HarmoF0Algorithm(BaseAlgorithm):
                 outputs.append(activation[start - first : end - first].cpu().numpy())
         return np.concatenate(outputs).astype(np.float64)
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:

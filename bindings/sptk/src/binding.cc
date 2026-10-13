@@ -4,7 +4,9 @@
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/string.h>
 
+#include <cstddef>
 #include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -45,21 +47,25 @@ Output ExtractF0(Waveform waveform, double sample_rate, int frame_shift,
 
   const std::vector<double> input(waveform.data(),
                                   waveform.data() + waveform.shape(0));
-  auto* f0(new std::vector<double>());
+  // The result is owned by the unique pointer until it is handed to the capsule,
+  // so that it is released even if the extraction throws an exception.
+  auto f0(std::make_unique<std::vector<double>>());
   bool success(false);
   {
     nb::gil_scoped_release release;
-    success = pitch_extraction.Run(input, f0, nullptr, nullptr);
+    success = pitch_extraction.Run(input, f0.get(), nullptr, nullptr);
   }
   if (!success) {
-    delete f0;
     throw std::runtime_error("Failed to extract pitch.");
   }
 
-  nb::capsule owner(f0, [](void* p) noexcept {
+  double* data(f0->data());
+  const std::size_t size(f0->size());
+  nb::capsule owner(f0.get(), [](void* p) noexcept {
     delete static_cast<std::vector<double>*>(p);
   });
-  return Output(f0->data(), {f0->size()}, owner);
+  f0.release();
+  return Output(data, {size}, owner);
 }
 
 }  // namespace

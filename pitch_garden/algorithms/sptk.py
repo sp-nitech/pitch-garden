@@ -14,6 +14,10 @@ _INT16_SCALE = 32768.0
 # The smallest lower bound greater than 10 Hz, which SPTK excludes.
 _MIN_F0 = float(np.nextafter(10.0, np.inf))
 
+# The margin in Hz between the upper bound of the search range and the Nyquist
+# frequency, within which the upper bound is clipped.
+_NYQUIST_MARGIN = 1.0
+
 
 def _import_sptk() -> Any:
     """Import the binding of SPTK lazily.
@@ -163,7 +167,7 @@ class SptkAlgorithm(BaseAlgorithm):
 
         SPTK requires the lower bound to be greater than 10 Hz, which is a sanity
         check of the arguments rather than a limitation of the algorithms. The upper
-        limit also has to be lower than the Nyquist frequency.
+        bound is clipped at the estimation to be lower than the Nyquist frequency.
 
         Returns
         -------
@@ -210,7 +214,7 @@ class SptkAlgorithm(BaseAlgorithm):
         Raises
         ------
         ValueError
-            If the search range is not lower than the Nyquist frequency.
+            If the whole search range is not lower than the Nyquist frequency.
 
         RuntimeError
             If SPTK fails to extract the F0, e.g., for too short audio.
@@ -219,11 +223,14 @@ class SptkAlgorithm(BaseAlgorithm):
         self.load()
         config = cast(SptkConfig, self.config)
         waveform, sample_rate = audio.data, audio.sample_rate
-        fmin, fmax = f0_range
-        if sample_rate / 2 <= fmax:
+        # The upper bound is clipped to be lower than the Nyquist frequency with a
+        # margin, because RAPT fails for a bound too close to it.
+        fmin = f0_range[0]
+        fmax = min(f0_range[1], sample_rate / 2 - _NYQUIST_MARGIN)
+        if fmax <= fmin:
             raise ValueError(
-                f"The upper bound of the search range ({fmax} Hz) must be lower "
-                f"than the Nyquist frequency ({sample_rate / 2} Hz)."
+                f"The search range {f0_range} Hz must be below the Nyquist frequency "
+                f"({sample_rate / 2} Hz)."
             )
         frame_shift = max(1, round(sample_rate * frame_period / 1000))
         try:

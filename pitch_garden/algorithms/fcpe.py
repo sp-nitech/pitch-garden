@@ -33,7 +33,6 @@ avoid its dependencies, e.g., local-attention, which the bundled model does not 
 from __future__ import annotations
 
 import functools
-import os
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
@@ -41,7 +40,12 @@ import numpy as np
 
 from ..interfaces.types import Audio
 from ..utils.units import cents_to_hz, hz_to_cents
-from ._torch import import_torch, resolve_torch_device
+from ._torch import (
+    download_weights,
+    import_torch,
+    resolve_torch_device,
+    with_num_threads,
+)
 from ._utils import mask_bins_out_of_range, mel_filterbank
 from .base import AlgorithmConfig, BaseAlgorithm, NativeContour, TwoPassPolicy
 
@@ -357,14 +361,9 @@ class FcpeAlgorithm(BaseAlgorithm):
         config = cast(FcpeConfig, self.config)
         if config.weights_path is not None:
             return config.weights_path
-        directory = os.path.join(self.torch.hub.get_dir(), "checkpoints")
-        path = os.path.join(directory, f"fcpe-c-v001-{_WEIGHTS_SHA256[:8]}.pt")
-        if not os.path.exists(path):
-            os.makedirs(directory, exist_ok=True)
-            self.torch.hub.download_url_to_file(
-                _WEIGHTS_URL, path, hash_prefix=_WEIGHTS_SHA256
-            )
-        return path
+        return download_weights(
+            self.torch, _WEIGHTS_URL, _WEIGHTS_SHA256, "fcpe-c-v001", ".pt"
+        )
 
     def load(self) -> None:
         """Load the model.
@@ -379,8 +378,6 @@ class FcpeAlgorithm(BaseAlgorithm):
             return
         self.torch = import_torch("FCPE")
         config = cast(FcpeConfig, self.config)
-        if config.num_threads is not None:
-            self.torch.set_num_threads(config.num_threads)
         model = _create_model(self.torch)
         checkpoint = self.torch.load(
             self._weights_path(), map_location=config.device, weights_only=True
@@ -419,6 +416,7 @@ class FcpeAlgorithm(BaseAlgorithm):
             mel = torch.cat([mel, mel[-1:].expand(num_frames - len(mel), -1)])
         return mel[:num_frames]
 
+    @with_num_threads
     def estimate(
         self, audio: Audio, f0_range: tuple[float, float], frame_period: float
     ) -> NativeContour:

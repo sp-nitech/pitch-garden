@@ -35,7 +35,7 @@ pip install "pitch-garden[all]"  # All trackers
 | `pesto` | ✓ | 28 – 3452 | 0.0 – 0.2 | [arXiv](https://arxiv.org/abs/2309.02265) | [GitHub](https://github.com/SonyCSLParis/pesto) |
 | `pienet` | ✓ | 50 – 500 | 0.5 – 1.0 | [IEEE Xplore](https://ieeexplore.ieee.org/document/8683041) | [GitHub](https://github.com/mairaksi/PiENet) |
 | `pyin` | | 16 – 8000 | | [IEEE Xplore](https://ieeexplore.ieee.org/document/6853678) | [GitHub](https://github.com/librosa/librosa) |
-| `rapt` | | 10 – Nyquist | 0.7 – -0.6 | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [KTH](https://www.speech.kth.se/snack/) |
+| `rapt` | | 10 – Nyquist | 0.7 – -0.6 | [EDU](https://www.ee.columbia.edu/~dpwe/papers/Talkin95-rapt.pdf) | [GitHub](https://github.com/scottypitcher/tcl-snack) |
 | `reaper` | | 10 – Nyquist | 1.6 – -0.5 | | [GitHub](https://github.com/google/reaper) |
 | `rmvpe` | ✓ | 32 – 2005 | 0.0 – 0.3 | [arXiv](https://arxiv.org/abs/2306.15412) | [GitHub](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) |
 | `straight` | | 40 – Nyquist | | [ISCA Archive](https://www.isca-archive.org/interspeech_2005/kawahara05_interspeech.html) | [GitHub](https://github.com/takenori-y/pylstraight) |
@@ -58,7 +58,7 @@ The F0 range is the search range that can be specified, and the accuracy near it
 | PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate than `fcn-f0` |
 | Praat (Parselmouth) | | [EDU](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
 | SPICE | ✓ | [arXiv](https://arxiv.org/abs/1910.11664) | [Kaggle](https://www.kaggle.com/models/google/spice) | No PyTorch weights available |
-| SRH | | [ISCA Archive](https://www.isca-archive.org/interspeech_2011/drugman11_interspeech.html) | | Sensitive to the search range |
+| SRH | | [ISCA Archive](https://www.isca-archive.org/interspeech_2011/drugman11_interspeech.html) | | Sensitive to the F0 search range |
 
 ## Usage
 
@@ -178,10 +178,10 @@ print(result.pass1.pitch)
 
 The settings are given by a YAML file, and the input and the output directory are given by the command line.
 The input is an audio file, a directory searched recursively, or a text file listing audio files line by line.
-See [configs/basic.yaml](configs/basic.yaml) and [configs/two_pass.yaml](configs/two_pass.yaml) for all settings.
+See [configs/rapt.yaml](configs/rapt.yaml) for all settings, [configs/voting.yaml](configs/voting.yaml) for multiple trackers, and [configs/two_pass.yaml](configs/two_pass.yaml) for the two-pass tracking.
 
 ```sh
-pitch-garden configs/basic.yaml data/wav -o exp/f0
+pitch-garden configs/voting.yaml data/wav -o exp/f0
 ```
 
 The main settings for the above use cases are as follows:

@@ -81,10 +81,22 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+# The CUDA 12.X build of PyTorch runs with the older drivers of the GPU servers.
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
 [tool.uv.sources]
 pitch-garden-sptk = { workspace = true }
-torch = [{ index = "pytorch-cpu", group = "cpu" }]
-torchaudio = [{ index = "pytorch-cpu", group = "cpu" }]
+torch = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-gpu", group = "gpu" },
+]
+torchaudio = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-gpu", group = "gpu" },
+]
 
 [tool.hatch.build.targets.sdist]
 only-include = ["pitch_garden"]
