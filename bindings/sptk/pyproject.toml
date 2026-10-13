@@ -33,5 +33,7 @@ skip = ["*-musllinux_*", "*-win32", "*_i686"]
 # Keep the cooldown of the uploaded packages in the build containers.
 environment-pass = ["PIP_UPLOADED_PRIOR_TO"]
 test-requires = ["pytest"]
-test-sources = ["tests"]
-test-command = "pytest tests"
+# The test sources are relative to the directory where cibuildwheel is run, i.e.,
+# the root of the repository in CI.
+test-sources = ["bindings/sptk/tests"]
+test-command = "pytest bindings/sptk/tests"

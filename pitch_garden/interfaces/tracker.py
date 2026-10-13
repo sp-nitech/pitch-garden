@@ -243,16 +243,20 @@ class Tracker:
         return self.load().estimate(audio, f0_range, frame_period)
 
     def _resolve_call_range(
-        self, f0_range: tuple[float, float] | None
+        self, fmin: float | None, fmax: float | None
     ) -> tuple[float, float]:
         """Get the search range used at a call."""
-        if f0_range is None:
+        if fmin is None and fmax is None:
             return self.f0_range
         if not self.supports_f0_range:
             raise ValueError(
                 f"{self.algorithm_class.__name__} does not support the F0 search range."
             )
-        return _clip_range(self.algorithm_class, *f0_range)
+        return _clip_range(
+            self.algorithm_class,
+            self.config.fmin if fmin is None else fmin,
+            self.config.fmax if fmax is None else fmax,
+        )
 
     def replace(self, **params: Any) -> Tracker:
         """Create a new tracker with some parameters replaced.
@@ -309,7 +313,8 @@ class Tracker:
         sample_rate: int | None = None,
         *,
         frame_period: float = 5.0,
-        f0_range: tuple[float, float] | None = None,
+        fmin: float | None = None,
+        fmax: float | None = None,
     ) -> Pitch:
         """Track the pitch of the input audio.
 
@@ -324,10 +329,15 @@ class Tracker:
         frame_period : float, optional
             The frame period of the output in milliseconds.
 
-        f0_range : tuple[float, float] | None, optional
-            The F0 search range in Hz overriding the one of the configuration, which
-            is clipped to the limits of the algorithm. Changing the range does not
-            reload the algorithm.
+        fmin : float | None, optional
+            The lower bound of the F0 search range in Hz overriding the one given at
+            the creation only for this call. If None, the one given at the creation
+            is used. The range is clipped to the limits of the algorithm, and
+            changing it does not reload the algorithm.
+
+        fmax : float | None, optional
+            The upper bound of the F0 search range in Hz, which is given in the same
+            way as `fmin`.
 
         Returns
         -------
@@ -354,7 +364,7 @@ class Tracker:
         """
         check_frame_period(frame_period)
         audio = create_audio_object(source, sample_rate)
-        call_range = self._resolve_call_range(f0_range)
+        call_range = self._resolve_call_range(fmin, fmax)
         if audio.length == 0:
             # Some algorithms fail on empty audio, which has no frames anyway.
             native = NativeContour(times=np.zeros(0), f0=np.zeros(0))

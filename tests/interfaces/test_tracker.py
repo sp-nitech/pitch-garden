@@ -101,14 +101,25 @@ def test_tracker_range_at_call() -> None:
     ConstantAlgorithm.num_instances = 0
     x = np.zeros(1600)
     assert np.all(tracker(x, 16000).voiced)
-    assert not np.any(tracker(x, 16000, f0_range=(300.0, 400.0)).voiced)
+    assert not np.any(tracker(x, 16000, fmin=300.0, fmax=400.0).voiced)
     # The range is clipped to the limits of the algorithm.
-    assert np.all(tracker(x, 16000, f0_range=(1.0, 1e5)).voiced)
+    assert np.all(tracker(x, 16000, fmin=1.0, fmax=1e5).voiced)
     assert ConstantAlgorithm.num_instances == 1
     with pytest.raises(ValueError):
-        tracker(x, 16000, f0_range=(300.0, 200.0))
+        tracker(x, 16000, fmin=300.0, fmax=200.0)
     with pytest.raises(ValueError):
-        Tracker(RangelessAlgorithm)(x, 16000, f0_range=(100.0, 200.0))
+        Tracker(RangelessAlgorithm)(x, 16000, fmin=100.0, fmax=200.0)
+
+
+def test_tracker_range_at_call_overrides_each_bound() -> None:
+    """Test that the bound not given at call is taken from the configuration."""
+    tracker = Tracker(ConstantAlgorithm, f0=200.0, fmin=100.0, fmax=150.0)
+    x = np.zeros(1600)
+    assert not np.any(tracker(x, 16000).voiced)
+    assert np.all(tracker(x, 16000, fmax=250.0).voiced)
+    # The lower bound above the upper bound of the configuration is invalid.
+    with pytest.raises(ValueError):
+        tracker(x, 16000, fmin=300.0)
 
 
 def test_tracker_replace() -> None:

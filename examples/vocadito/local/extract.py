@@ -41,7 +41,9 @@ def extract(
     for path in sorted(glob.glob(os.path.join(database_dir, "Audio", "*.wav"))):
         name = os.path.splitext(os.path.basename(path))[0]
         audio = pg.load_audio(path)
-        pitch = tracker(audio, frame_period=FRAME_PERIOD, f0_range=F0_RANGE)
+        pitch = tracker(
+            audio, frame_period=FRAME_PERIOD, fmin=F0_RANGE[0], fmax=F0_RANGE[1]
+        )
         pitch.tofile(
             os.path.join(save_dir, f"{name}.npz"),
             output_format="linear",

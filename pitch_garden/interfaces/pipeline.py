@@ -8,8 +8,8 @@ import os
 import sys
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ProcessPoolExecutor
-from dataclasses import dataclass, field
-from typing import Any, Literal, get_args
+from dataclasses import dataclass, field, replace
+from typing import Any, Literal, cast, get_args
 
 import numpy as np
 
@@ -54,7 +54,20 @@ def _run_in_worker(
     cached = _WORKER_CACHE.get(key)
     if cached is None:
         cached = _WORKER_CACHE[key] = tracker
-    return cached(audio, frame_period=frame_period, f0_range=f0_range)
+    return _call(cached, audio, frame_period, f0_range)
+
+
+def _call(
+    tracker: Tracker,
+    audio: Audio,
+    frame_period: float,
+    f0_range: tuple[float, float] | None,
+) -> Pitch:
+    """Run a tracker with the search range if given."""
+    if f0_range is None:
+        return tracker(audio, frame_period=frame_period)
+    fmin, fmax = f0_range
+    return tracker(audio, frame_period=frame_period, fmin=fmin, fmax=fmax)
 
 
 @dataclass
@@ -342,9 +355,7 @@ class Pipeline:
         for t in trackers:
             if t.name not in futures:
                 try:
-                    outputs[t.name] = t(
-                        audio, frame_period=frame_period, f0_range=ranges[t.name]
-                    )
+                    outputs[t.name] = _call(t, audio, frame_period, ranges[t.name])
                 except Exception as e:
                     errors[t.name] = e
         for name, future in futures.items():
@@ -394,6 +405,8 @@ class Pipeline:
         sample_rate: int | None = None,
         *,
         frame_period: float = 5.0,
+        fmin: float | None = None,
+        fmax: float | None = None,
     ) -> PipelineResult:
         """Run the trackers and vote their outputs.
 
@@ -408,20 +421,47 @@ class Pipeline:
         frame_period : float, optional
             The frame period of the outputs in milliseconds.
 
+        fmin : float | None, optional
+            The lower bound of the F0 search range in Hz overriding the range used
+            first only for this call, i.e., the ranges of the trackers, or the
+            first-pass range of the two-pass tracking. If None, the bound of the
+            overridden range is kept. The trackers not supporting the search range
+            are not affected.
+
+        fmax : float | None, optional
+            The upper bound of the F0 search range in Hz, which is given in the same
+            way as `fmin`.
+
         Returns
         -------
         out : PipelineResult
             The final contour and the outputs of the trackers.
 
+        Raises
+        ------
+        ValueError
+            If the search range is invalid.
+
         """
         audio = create_audio_object(source, sample_rate)
-        first = self.first_pass(audio, frame_period=frame_period)
+        first = self.first_pass(audio, frame_period=frame_period, fmin=fmin, fmax=fmax)
         if self.two_pass is None:
             return first
         f0_range = self.estimate_f0_range([first])
+        if f0_range.fallback:
+            # The range of the first pass is kept, which may be given at call.
+            wide = self._first_pass_range(fmin, fmax)
+            f0_range = replace(f0_range, fmin=wide[0], fmax=wide[1])
         return self.second_pass(audio, first, f0_range, frame_period=frame_period)
 
-    def first_pass(self, audio: Audio, *, frame_period: float = 5.0) -> PipelineResult:
+    def first_pass(
+        self,
+        audio: Audio,
+        *,
+        frame_period: float = 5.0,
+        fmin: float | None = None,
+        fmax: float | None = None,
+    ) -> PipelineResult:
         """Run the trackers with the first-pass search range and vote their outputs.
 
         If the two-pass tracking is disabled, the trackers are run with their own
@@ -435,17 +475,40 @@ class Pipeline:
         frame_period : float, optional
             The frame period of the outputs in milliseconds.
 
+        fmin : float | None, optional
+            The lower bound of the F0 search range in Hz overriding the range used
+            first only for this call, which is given in the same way as in
+            `__call__`.
+
+        fmax : float | None, optional
+            The upper bound of the F0 search range in Hz overriding the range used
+            first only for this call.
+
         Returns
         -------
         out : PipelineResult
             The result of the first pass.
 
+        Raises
+        ------
+        ValueError
+            If the search range is invalid.
+
         """
         f0_ranges = None
         if self.two_pass is not None:
             # All trackers use the wide range regardless of whether they are rerun.
-            wide = (self.two_pass.fmin, self.two_pass.fmax)
+            wide = self._first_pass_range(fmin, fmax)
             f0_ranges = {t.name: wide for t in self.trackers}
+        elif fmin is not None or fmax is not None:
+            # The bound not given is taken from each tracker.
+            f0_ranges = {}
+            for t in self.trackers:
+                if t.supports_f0_range:
+                    lower, upper = t.f0_range
+                    f0_ranges[t.name] = _check_range(
+                        lower if fmin is None else fmin, upper if fmax is None else fmax
+                    )
         each, errors = self._track_each(
             audio, frame_period=frame_period, trackers=None, f0_ranges=f0_ranges
         )
@@ -575,6 +638,16 @@ class Pipeline:
             errors={**first.errors, **_format_errors(errors)},
         )
 
+    def _first_pass_range(
+        self, fmin: float | None, fmax: float | None
+    ) -> tuple[float, float]:
+        """Get the first-pass range of the two-pass tracking given at a call."""
+        two_pass = cast(TwoPass, self.two_pass)
+        return _check_range(
+            two_pass.fmin if fmin is None else fmin,
+            two_pass.fmax if fmax is None else fmax,
+        )
+
     def _rerun_trackers(self) -> list[Tracker]:
         """Get the trackers rerun in the second pass."""
         return [
@@ -607,6 +680,16 @@ class Pipeline:
         if min(f0_range[1], upper) <= max(f0_range[0], lower):
             return None
         return f0_range
+
+
+def _check_range(fmin: float, fmax: float) -> tuple[float, float]:
+    """Check the search range given at a call."""
+    if not 0 < fmin < fmax:
+        raise ValueError(
+            f"Invalid F0 search range: fmin={fmin}, fmax={fmax}. "
+            "0 < fmin < fmax must be satisfied."
+        )
+    return fmin, fmax
 
 
 def _format_errors(errors: Mapping[str, Exception]) -> dict[str, str]:

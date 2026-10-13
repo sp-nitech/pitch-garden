@@ -414,3 +414,36 @@ def test_trackers_not_rerun_use_first_pass_range() -> None:
     assert result.pass1 is not None
     assert np.all(result.pass1.each["a"].voiced)
     assert np.all(result.each["a"].voiced)
+
+
+def test_range_at_call() -> None:
+    """Test that the search range can be given at call without the two passes."""
+    trackers = [
+        Tracker(ConstantAlgorithm, name="a", f0=200.0),
+        Tracker(ConstantAlgorithm, name="b", f0=200.0, fmin=100.0, fmax=150.0),
+    ]
+    with Pipeline(trackers, num_workers=1) as pipeline:
+        result = pipeline(np.zeros(16000), 16000)
+        assert np.all(result.each["a"].voiced)
+        assert not np.any(result.each["b"].voiced)
+        result = pipeline(np.zeros(16000), 16000, fmin=300.0, fmax=400.0)
+        assert not np.any(result.each["a"].voiced)
+        # The bound not given at call is taken from each tracker.
+        result = pipeline(np.zeros(16000), 16000, fmax=250.0)
+        assert np.all(result.each["a"].voiced)
+        assert np.all(result.each["b"].voiced)
+        with pytest.raises(ValueError):
+            pipeline(np.zeros(16000), 16000, fmin=300.0, fmax=200.0)
+
+
+def test_range_at_call_with_two_passes() -> None:
+    """Test that the range given at call replaces the range of the first pass."""
+    two_pass = TwoPass(estimator=MedianScaleRangeEstimator(), fmin=40.0, fmax=2000.0)
+    tracker = Tracker(ConstantAlgorithm, name="a", f0=200.0)
+    with Pipeline([tracker], num_workers=1, two_pass=two_pass) as pipeline:
+        result = pipeline(np.zeros(16000), 16000, fmin=300.0)
+    assert result.pass1 is not None
+    assert not np.any(result.pass1.each["a"].voiced)
+    # The range of the first pass is kept if the range cannot be estimated.
+    assert result.f0_range is not None and result.f0_range.fallback
+    assert (result.f0_range.fmin, result.f0_range.fmax) == (300.0, 2000.0)

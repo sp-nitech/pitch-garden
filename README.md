@@ -104,6 +104,8 @@ pitch = tracker(waveform, sample_rate)
 ### Single algorithm
 
 A `Tracker` holds an algorithm and its own parameters.
+The F0 search range given by `fmin` and `fmax` at the creation is the default of the tracker, and can be overridden only for a call by giving `fmin` and/or `fmax` to the call, e.g., if the range is known for each file.
+The bound not given at the call is taken from the creation, and changing the range does not reload the algorithm.
 The trackers supporting GPUs, e.g., `crepe`, use a GPU if available, which is chosen when the tracker is created and can be changed by `tracker.replace(device="cpu")`.
 The output `Pitch` holds the F0 in Hz on a uniform frame grid regardless of the native frame period of the algorithm, and converts it to other formats on demand.
 
@@ -117,6 +119,9 @@ pitch = tracker(audio, frame_period=5.0)
 print(pitch)
 # Pitch(source='rapt', num_frames=100, num_voiced_frames=..., ...)
 print(pitch.f0)  # The F0 in Hz as a NumPy array, where unvoiced frames are 0.
+
+# The search range is overridden only for this call, i.e., 80-800 Hz.
+pitch = tracker(audio, frame_period=5.0, fmin=80.0)
 
 # The F0 is converted to a NumPy array of another format.
 lf0 = pitch.to("log")  # log F0 (unvoiced: -1e10)
@@ -133,6 +138,7 @@ pitch.tofile("speech.lf0", output_format="log", file_type="double")
 
 A `Pipeline` runs the trackers in parallel where possible and votes their outputs.
 The same algorithm can be used with different parameters by giving different names.
+The F0 search range can be given at a call as with `Tracker`, which overrides the ranges of all trackers supporting it only for the call.
 
 ```python
 import pitch_garden as pg
@@ -162,6 +168,7 @@ for name, pitch in result.each.items():
 
 If the F0 range of the speaker is unknown, the trackers are first run with a wide search range, and then rerun with the range estimated from the distribution of the F0 of the first pass.
 This works with a single tracker as well as multiple ones, where the estimated range is shared by all trackers.
+The first-pass range is given by `TwoPass`, and can be overridden only for a call by giving `fmin` and/or `fmax` to the call, e.g., if a rough range is known for each file.
 Each algorithm has its recommended settings chosen in [examples/pitch_benchmark](https://github.com/takenori-y/pitch-garden/tree/master/examples/pitch_benchmark), i.e., whether it is rerun and which pass gives the voicing decisions, which can be overridden by `two_pass_policy` of each tracker.
 
 ```python
