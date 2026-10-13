@@ -1,10 +1,18 @@
 name: release
 
-# Run manually from the Actions tab after choosing the packages to publish. The
-# packages are published only if all the jobs of the CI pass.
+# Run manually from the Actions tab after choosing the repository and the packages
+# to publish. The packages are published only if all the jobs of the CI pass.
 on:
   workflow_dispatch:
     inputs:
+      repository:
+        description: The repository to publish to
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
       pitch-garden-sptk:
         description: Publish pitch-garden-sptk
         type: boolean
@@ -27,8 +35,8 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     environment:
-      name: pypi
-      url: https://pypi.org/p/pitch-garden-sptk
+      name: ${{ inputs.repository }}
+      url: ${{ inputs.repository == 'pypi' && 'https://pypi.org/p/pitch-garden-sptk' || 'https://test.pypi.org/p/pitch-garden-sptk' }}
     permissions:
       id-token: write
 
@@ -42,6 +50,8 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: ${{ inputs.repository == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
 
   # pitch-garden is published after pitch-garden-sptk if both are chosen, so that
   # its dependency is available.
@@ -53,8 +63,8 @@ jobs:
       - publish-sptk
     runs-on: ubuntu-latest
     environment:
-      name: pypi
-      url: https://pypi.org/p/pitch-garden
+      name: ${{ inputs.repository }}
+      url: ${{ inputs.repository == 'pypi' && 'https://pypi.org/p/pitch-garden' || 'https://test.pypi.org/p/pitch-garden' }}
     permissions:
       id-token: write
 
@@ -67,3 +77,5 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: ${{ inputs.repository == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}

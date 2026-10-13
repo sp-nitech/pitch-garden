@@ -3,6 +3,15 @@
 *pitch-garden* provides a unified interface to various pitch (F0) trackers and integrates their outputs by voting.
 The outputs of all trackers are aligned on a common frame grid, so that they can be directly compared and voted.
 
+[![Manual](https://img.shields.io/badge/docs-stable-blue.svg)](https://takenori-y.github.io/pitch-garden/stable/)
+[![Downloads](https://static.pepy.tech/badge/pitch-garden)](https://pepy.tech/project/pitch-garden)
+[![ClickPy](https://img.shields.io/badge/downloads-clickpy-yellow.svg)](https://clickpy.clickhouse.com/dashboard/pitch-garden)
+[![Python Version](https://img.shields.io/pypi/pyversions/pitch-garden.svg)](https://pypi.python.org/pypi/pitch-garden)
+[![PyPI](https://img.shields.io/pypi/v/pitch-garden.svg)](https://pypi.python.org/pypi/pitch-garden)
+[![License](https://img.shields.io/github/license/takenori-y/pitch-garden.svg)](https://github.com/takenori-y/pitch-garden/blob/master/LICENSE)
+[![GitHub Actions](https://github.com/takenori-y/pitch-garden/workflows/package/badge.svg)](https://github.com/takenori-y/pitch-garden/actions)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 ## Features
 
 - Voting of multiple trackers
@@ -12,6 +21,10 @@ The outputs of all trackers are aligned on a common frame grid, so that they can
 ## Requirements
 
 - Python 3.12+
+
+## Documentation
+
+- See [this page](https://takenori-y.github.io/pitch-garden/stable/) for the reference manual.
 
 ## Installation
 
@@ -149,7 +162,7 @@ for name, pitch in result.each.items():
 
 If the F0 range of the speaker is unknown, the trackers are first run with a wide search range, and then rerun with the range estimated from the distribution of the F0 of the first pass.
 This works with a single tracker as well as multiple ones, where the estimated range is shared by all trackers.
-Each algorithm has its recommended settings chosen in [examples/pitch_benchmark](examples/pitch_benchmark), i.e., whether it is rerun and which pass gives the voicing decisions, which can be overridden by `two_pass_policy` of each tracker.
+Each algorithm has its recommended settings chosen in [examples/pitch_benchmark](https://github.com/takenori-y/pitch-garden/tree/master/examples/pitch_benchmark), i.e., whether it is rerun and which pass gives the voicing decisions, which can be overridden by `two_pass_policy` of each tracker.
 
 ```python
 import pitch_garden as pg
@@ -178,7 +191,7 @@ print(result.pass1.pitch)
 
 The settings are given by a YAML file, and the input and the output directory are given by the command line.
 The input is an audio file, a directory searched recursively, or a text file listing audio files line by line.
-See [configs/single.yaml](configs/single.yaml) for all settings, [configs/multiple.yaml](configs/multiple.yaml) for multiple trackers, and [configs/two-pass.yaml](configs/two-pass.yaml) for the two-pass tracking.
+See [configs/single.yaml](https://github.com/takenori-y/pitch-garden/blob/master/configs/single.yaml) for all settings, [configs/multiple.yaml](https://github.com/takenori-y/pitch-garden/blob/master/configs/multiple.yaml) for multiple trackers, and [configs/two-pass.yaml](https://github.com/takenori-y/pitch-garden/blob/master/configs/two-pass.yaml) for the two-pass tracking.
 
 ```sh
 pitch-garden configs/multiple.yaml data/wav -o exp/f0

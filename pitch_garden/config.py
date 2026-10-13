@@ -370,8 +370,11 @@ def load_config(path: str) -> Config:
         If the configuration is invalid.
 
     """
-    with open(path) as f:
-        data = yaml.safe_load(f)
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError) as e:
+        raise ConfigError(f"{path}: {e}") from e
     try:
         return parse_config(data)
     except ConfigError as e:

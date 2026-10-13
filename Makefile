@@ -24,10 +24,16 @@ dist:
 dist-clean:
 	rm -rf dist
 
+doc:
+	$(UV_RUN) $(MAKE) -C docs html
+
+doc-clean:
+	rm -rf docs/build
+
 check: tool
 	uv lock --check
 	$(UV_RUN) ruff check $(SOURCES)
-	$(UV_RUN) ruff format --check $(SOURCES)
+	$(UV_RUN) ruff format --check $(SOURCES) docs/source
 	$(UV_RUN) pyright $(SOURCES)
 	$(UV_RUN) cmake-format --check bindings/sptk/CMakeLists.txt
 	$(UV_RUN) mdformat --check *.md bindings/sptk/*.md examples/*/README.md
@@ -39,7 +45,7 @@ check: tool
 
 format: tool
 	$(UV_RUN) ruff check --fix $(SOURCES)
-	$(UV_RUN) ruff format $(SOURCES)
+	$(UV_RUN) ruff format $(SOURCES) docs/source
 	$(UV_RUN) cmake-format -i bindings/sptk/CMakeLists.txt
 	$(UV_RUN) mdformat *.md bindings/sptk/*.md examples/*/README.md
 	./tools/pinact/pinact run -u --min-age 14 .github/workflows/*.yaml
@@ -57,9 +63,9 @@ tool:
 tool-clean:
 	cd tools && $(MAKE) clean
 
-clean: dist-clean tool-clean
+clean: dist-clean doc-clean tool-clean
 	cd bindings/sptk && $(MAKE) clean
 	rm -rf .venv
 	find . -name "__pycache__" -type d -print0 | xargs -0 rm -rf
 
-.PHONY: setup update dist dist-clean check format test tool tool-clean clean
+.PHONY: setup update dist dist-clean doc doc-clean check format test tool tool-clean clean

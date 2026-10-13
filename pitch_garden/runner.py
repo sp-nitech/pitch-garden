@@ -90,7 +90,8 @@ def group_files(files: list[str], settings: TwoPassSettings) -> dict[str, list[s
     Raises
     ------
     ValueError
-        If the map file is not given or a file is not found in the map file.
+        If the map file is not given or cannot be read, or a file is not found in
+        the map file.
 
     """
     if settings.scope == "utterance":
@@ -103,11 +104,14 @@ def group_files(files: list[str], settings: TwoPassSettings) -> dict[str, list[s
     if group_by.type == "map":
         if group_by.path is None:
             raise ValueError("The map file is required to group files by 'map'.")
-        with open(group_by.path) as f:
-            for line in f:
-                items = line.split()
-                if len(items) >= 2:
-                    mapping[items[0]] = items[1]
+        try:
+            with open(group_by.path) as f:
+                for line in f:
+                    items = line.split()
+                    if len(items) >= 2:
+                        mapping[items[0]] = items[1]
+        except OSError as e:
+            raise ValueError(f"The map file cannot be read: {e}") from e
 
     groups: dict[str, list[str]] = {}
     for file in files:
@@ -260,7 +264,7 @@ def run_batch(
         try:
             return func(load_audio(file, raw))
         except Exception as e:
-            logger.error(f"Error processing file {file}: {e}. Skipping.")
+            logger.error(f"Skipping {file} due to an error: {e}")
             num_errors += 1
             return None
 

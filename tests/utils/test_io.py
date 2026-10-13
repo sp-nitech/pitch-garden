@@ -80,6 +80,10 @@ def test_load_audio_dispatches_raw(tmp_path) -> None:
         load_audio(str(path))
     with pytest.raises(TypeError, match="sample_rate"):
         RawFormat()  # type: ignore[call-arg]
+    # A missing file is not regarded as raw.
+    for missing in (tmp_path / "missing.wav", tmp_path / "missing.raw"):
+        with pytest.raises(FileNotFoundError):
+            load_audio(str(missing))
     # Other extensions can be regarded as raw.
     other = tmp_path / "a.pcm"
     np.array([16384], dtype="<i2").tofile(other)

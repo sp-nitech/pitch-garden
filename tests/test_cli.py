@@ -1,9 +1,12 @@
 """Tests for the command-line interface."""
 
+import logging
+
 import numpy as np
 import pytest
 import yaml
 
+import pitch_garden as pg
 from pitch_garden.cli import main as cli
 
 
@@ -35,3 +38,37 @@ def test_cli_invalid_input(tmp_path, constant) -> None:
     with pytest.raises(SystemExit) as e:
         cli([str(config_path), str(tmp_path / "missing"), "--quiet"])
     assert e.value.code == 2
+
+
+def test_cli_invalid_config_file(tmp_path) -> None:
+    """Test that an unreadable configuration is reported without a traceback."""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("trackers: [\n")
+    for path in (config_path, tmp_path / "missing.yaml"):
+        with pytest.raises(SystemExit) as e:
+            cli([str(path), str(tmp_path), "--quiet"])
+        assert e.value.code == 2
+
+
+def test_cli_skipped_files_are_counted(tmp_path, constant, caplog) -> None:
+    """Test the messages of the skipped files."""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump({"trackers": [{"algorithm": "constant"}]}))
+    list_path = tmp_path / "list.txt"
+    list_path.write_text(f"{tmp_path / 'missing.wav'}\n")
+    with caplog.at_level(logging.INFO, logger="pitch_garden"):
+        with pytest.raises(SystemExit) as e:
+            cli([str(config_path), str(list_path), "-o", str(tmp_path / "out")])
+    assert e.value.code == 1
+    messages = [r.getMessage() for r in caplog.records]
+    assert "1 file was skipped due to errors." in messages
+    assert not any(".." in m for m in messages)
+    assert not any("RawFormat" in m for m in messages)
+
+
+def test_cli_version(capsys) -> None:
+    """Test showing the version."""
+    with pytest.raises(SystemExit) as e:
+        cli(["--version"])
+    assert e.value.code == 0
+    assert pg.__version__ in capsys.readouterr().out

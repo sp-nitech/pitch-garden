@@ -46,10 +46,12 @@ dev = [
   "cmake-format",
   "mdformat",
   "numpydoc",
+  "pydata-sphinx-theme",
   "pyright[nodejs]",
   "pytest",
   "pytest-cov",
   "ruff",
+  "sphinx",
   "twine",
 ]
 

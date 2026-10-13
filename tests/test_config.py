@@ -206,6 +206,11 @@ def test_load_from_file(tmp_path) -> None:
     path.write_text("- a\n- b\n")
     with pytest.raises(ConfigError):
         load_config(str(path))
+    path.write_text("trackers: [\n")
+    with pytest.raises(ConfigError, match="config.yaml"):
+        load_config(str(path))
+    with pytest.raises(ConfigError, match="missing.yaml"):
+        load_config(str(tmp_path / "missing.yaml"))
 
 
 def test_two_pass_policy_of_tracker() -> None:

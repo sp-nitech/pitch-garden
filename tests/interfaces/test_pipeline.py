@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import pytest
 
-from pitch_garden import Pipeline, Tracker, TwoPass, TwoPassPolicy
+from pitch_garden import Pipeline, PipelineResult, Tracker, TwoPass, TwoPassPolicy
 from pitch_garden.algorithms import ALGORITHM_MAP
 from pitch_garden.algorithms.base import VoicingSource
 from pitch_garden.voters.median import MedianVoter
@@ -39,6 +39,7 @@ def test_voting() -> None:
     """Test that the outputs of the trackers are voted."""
     with Pipeline(make_trackers(), num_workers=1) as pipeline:
         result = pipeline(np.zeros(16000), 16000, frame_period=5.0)
+    assert isinstance(result, PipelineResult)
     assert list(result.each.keys()) == ["a", "b", "c"]
     assert result.pitch is not None
     np.testing.assert_allclose(result.pitch.f0, 200.0)

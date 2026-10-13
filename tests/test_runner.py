@@ -78,6 +78,9 @@ def test_group_files(wav_dir, tmp_path) -> None:
     map_file.write_text("spk1_0 A\n")
     with pytest.raises(ValueError):
         group_files(files, settings)
+    settings.group_by.path = str(tmp_path / "missing.map")
+    with pytest.raises(ValueError, match="missing.map"):
+        group_files(files, settings)
 
 
 def test_run_batch_fixed(wav_dir, tmp_path, constant) -> None:

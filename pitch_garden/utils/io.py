@@ -151,10 +151,15 @@ def load_audio(path: str, raw: RawFormat | None = None) -> Audio:
 
     Raises
     ------
+    FileNotFoundError
+        If the file does not exist.
+
     ValueError
         If the file cannot be read as audio without the format of raw files.
 
     """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"No such file: {path}")
     if raw is not None and raw.is_raw(path):
         return _load_raw(path, raw.sample_rate, raw.data_type, raw.num_channels)
 
