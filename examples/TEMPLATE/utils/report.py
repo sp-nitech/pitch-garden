@@ -30,7 +30,9 @@ def format_values(metrics: dict[str, float]) -> str:
     )
 
 
-def format_table(results: dict[str, dict[str, float]]) -> str:
+def format_table(
+    results: dict[str, dict[str, float]], sort_by: str | None = None
+) -> str:
     """Format the results as a Markdown table.
 
     Parameters
@@ -38,16 +40,23 @@ def format_table(results: dict[str, dict[str, float]]) -> str:
     results : dict[str, dict[str, float]]
         The metrics keyed by the tracker names.
 
+    sort_by : str or None
+        The metric by which the trackers are sorted in descending order, where the
+        ties are sorted by name. If None, the trackers are sorted by name.
+
     Returns
     -------
     out : str
-        The Markdown table, where the trackers are sorted by name.
+        The Markdown table.
 
     """
     header = "| Tracker | " + " | ".join(c[1] for c in COLUMNS) + " |"
     align = "| :--- | " + " | ".join("---:" for _ in COLUMNS) + " |"
     rows = [header, align]
-    for name in sorted(results):
+    names = sorted(results)
+    if sort_by is not None:
+        names.sort(key=lambda name: -results[name][sort_by])
+    for name in names:
         rows.append(f"| `{name}` | " + format_values(results[name]) + " |")
     return "\n".join(rows)
 

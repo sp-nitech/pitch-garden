@@ -15,6 +15,17 @@ def test_format_table() -> None:
     assert lines[2] == "| `rapt` | 87.6 | 90.0 | 12.3 | 85.0 |"
 
 
+def test_format_table_sorted_by_metric() -> None:
+    """Test that the trackers are sorted by a metric in descending order."""
+    results = {
+        "a": {"rpa": 0.9, "rca": 0.9, "vde": 0.1, "oa": 0.80},
+        "b": {"rpa": 0.9, "rca": 0.9, "vde": 0.1, "oa": 0.85},
+        "c": {"rpa": 0.9, "rca": 0.9, "vde": 0.1, "oa": 0.80},
+    }
+    lines = report.format_table(results, sort_by="oa").splitlines()
+    assert [line.split(" | ")[0] for line in lines[2:]] == ["| `b`", "| `a`", "| `c`"]
+
+
 def test_update_readme(tmp_path) -> None:
     """Test that only the named section of the README is replaced."""
     path = tmp_path / "README.md"

@@ -98,7 +98,7 @@ def main() -> None:
     args = parser.parse_args()
 
     results = collect_results(args.reference_dir, args.exp_dir)
-    table = format_table(results)
+    table = format_table(results, sort_by="oa")
     print(table)
     if args.readme is not None:
         update_readme(args.readme, "results", table)
