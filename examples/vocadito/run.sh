@@ -15,13 +15,14 @@ device=auto # The device of the neural trackers, where auto prefers a GPU.
 # Download the dataset.
 if [ ! -d "$db" ]; then
     mkdir -p downloads
-    wget -q "$url" -O downloads/vocadito.zip
+    if [ ! -f downloads/vocadito.zip ]; then
+        wget -q "$url" -O downloads/vocadito.zip
+    fi
     echo "$md5  downloads/vocadito.zip" | md5sum -c --quiet
     # Python is used instead of unzip, which is not always installed.
     python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' \
         downloads/vocadito.zip "$db"
     rm -rf "$db/__MACOSX"
-    rm downloads/vocadito.zip
 fi
 
 # Extract F0 with each tracker.

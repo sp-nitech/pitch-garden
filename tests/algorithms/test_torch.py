@@ -29,7 +29,10 @@ def test_num_threads_is_local(algorithm: str, monkeypatch) -> None:
         return call(self, *args, **kwargs)
 
     tracker = Tracker(algorithm, num_threads=target, device="cpu")
-    tracker.load()
+    try:
+        tracker.load()
+    except ImportError:
+        pytest.skip(f"{algorithm} is not installed.")
     assert torch.get_num_threads() == original
     monkeypatch.setattr(torch.nn.Module, "__call__", spy)
     tracker(generate_pulse_train(150.0)[:4000], 16000)

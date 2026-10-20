@@ -57,7 +57,9 @@ pip install "pitch-garden[all]"  # All trackers
 | `yaapt` | | 10 – Nyquist | 0.1 – 1.0 | [IEEE Xplore](https://ieeexplore.ieee.org/document/5743729) | [GitHub](https://github.com/bjbschmitt/AMFM_decompy) |
 | `yin` | | 16 – 8000 | 0.3 – 0.6 | [JASA](https://doi.org/10.1121/1.1458024) | [GitHub](https://github.com/librosa/librosa) |
 
-The F0 range is the search range that can be specified, and the accuracy near its ends depends on the algorithm.
+The F0 range is the search range that can be specified.
+The voicing threshold is shown as a typical range, where moving it toward the right value gives more unvoiced frames.
+`pesto` is not available on Python 3.15 or later, because the pesto-pitch package requires torchaudio, which does not support those versions.
 `dio`, `harvest`, `rapt`, `reaper`, and `swipe` are based on the implementations in [SPTK](https://github.com/sp-nitech/SPTK), and their outputs are compatible with the `pitch` command of SPTK.
 
 ## Unsupported Algorithms
@@ -68,10 +70,9 @@ The F0 range is the search range that can be specified, and the accuracy near it
 | JDCNet | ✓ | [MDPI](https://doi.org/10.3390/app9071324) | [GitHub](https://github.com/keums/melodyExtraction_JDC) | PyTorch versions are unlicensed |
 | Kaldi Pitch | | [IEEE Xplore](https://doi.org/10.1109/ICASSP.2014.6854049) | [GitHub](https://github.com/kaldi-asr/kaldi) | No maintained Python implementation |
 | MPM | | [EDU](https://www.cs.otago.ac.nz/research/publications/oucs-2008-03.pdf) | | Similar to `yin` |
-| PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Less accurate than `fcn-f0` |
+| PENN (FCNF0++) | ✓ | [arXiv](https://arxiv.org/abs/2301.12258) | [GitHub](https://github.com/interactiveaudiolab/penn) | Did not outperform `fcn-f0` in our evaluation |
 | Praat (Parselmouth) | | [EDU](https://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf) | [GitHub](https://github.com/YannickJadoul/Parselmouth) | Licensed under GPL-3.0 |
 | SPICE | ✓ | [arXiv](https://arxiv.org/abs/1910.11664) | [Kaggle](https://www.kaggle.com/models/google/spice) | No PyTorch weights available |
-| SRH | | [ISCA Archive](https://www.isca-archive.org/interspeech_2011/drugman11_interspeech.html) | | Sensitive to the F0 search range |
 
 ## Usage
 

@@ -17,7 +17,9 @@ device=auto # The device of the neural trackers, where auto prefers a GPU.
 # extracted.
 if [ ! -d "$db" ]; then
     mkdir -p downloads
-    wget -q "$url" -O downloads/SPEECH_DATA_ZIPPED.zip
+    if [ ! -f downloads/SPEECH_DATA_ZIPPED.zip ]; then
+        wget -q "$url" -O downloads/SPEECH_DATA_ZIPPED.zip
+    fi
     echo "$md5  downloads/SPEECH_DATA_ZIPPED.zip" | md5sum -c --quiet
     # Python is used instead of unzip, which is not always installed.
     python -c '
@@ -25,7 +27,6 @@ import sys, zipfile
 z = zipfile.ZipFile(sys.argv[1])
 z.extractall(sys.argv[2], [n for n in z.namelist() if "/MIC/" in n or "/REF/" in n])
 ' downloads/SPEECH_DATA_ZIPPED.zip downloads
-    rm downloads/SPEECH_DATA_ZIPPED.zip
 fi
 
 # Extract F0 with each tracker.

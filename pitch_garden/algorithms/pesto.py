@@ -1,7 +1,9 @@
 """A module for the PESTO algorithm.
 
 The pesto-pitch package is used as a dependency, which is distributed under the
-LGPLv3, and thus its code is not ported here unlike CREPE.
+LGPLv3, and thus its code is not ported here unlike CREPE. The package is installed
+only on Python 3.14 or earlier because it requires torchaudio, which does not
+support Python 3.15.
 
 """
 
@@ -45,7 +47,8 @@ def _import_pesto() -> Any:
         import pesto
     except ImportError as e:
         raise ImportError(
-            "PESTO requires the pesto-pitch package. "
+            "PESTO requires the pesto-pitch package, which is available on "
+            "Python 3.14 or earlier because it depends on torchaudio. "
             'Install it via `pip install "pitch-garden[torch]"`.'
         ) from e
     return pesto

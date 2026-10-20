@@ -4,7 +4,6 @@ MODULE  :=
 
 PYTHON_VERSION := 3.12
 
-# The build of PyTorch: gpu or cpu.
 TORCH := gpu
 
 UV_RUN := uv run --no-sync

@@ -18,10 +18,11 @@ device=auto # The device of the neural trackers, where auto prefers a GPU.
 # Download the eval set.
 if [ ! -d "$db" ]; then
     mkdir -p downloads
-    wget -q "$url" -O downloads/eval.tar
+    if [ ! -f downloads/eval.tar ]; then
+        wget -q "$url" -O downloads/eval.tar
+    fi
     echo "$sha256  downloads/eval.tar" | sha256sum -c --quiet
     tar xf downloads/eval.tar -C downloads
-    rm downloads/eval.tar
 fi
 
 # The algorithms given as the arguments, e.g., ./run.sh pesto, or all the registered

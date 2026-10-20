@@ -1,6 +1,6 @@
 """A Python binding of the pitch extraction of SPTK."""
 
-from ._core import extract_f0
+from ._core import extract_f0  # pyright: ignore[reportMissingModuleSource]
 
 # The algorithms in the order of the -a option of the pitch command of SPTK.
 ALGORITHMS = ("rapt", "swipe", "reaper", "dio", "harvest")
