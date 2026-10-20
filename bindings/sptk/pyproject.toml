@@ -12,7 +12,7 @@ maintainers = [
 description = "A Python binding of the pitch extraction of SPTK for pitch-garden"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT; the bundled SPTK and its third-party libraries are under their own licenses" }
+license = { text = "Apache-2.0; the bundled SPTK and its third-party libraries are under their own licenses" }
 dependencies = ["numpy >= 1.26.0"]
 
 [tool.scikit-build]

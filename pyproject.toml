@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling >= 1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -12,9 +12,10 @@ description = "A unified interface to various pitch trackers with ensemble votin
 readme = "README.md"
 requires-python = ">=3.12"
 keywords = ["pitch", "f0", "speech-processing", "singing-voice"]
-license = { text = "MIT" }
+# The ported code keeps its own license, e.g., MIT of torchcrepe and ISC of librosa.
+license = "Apache-2.0 AND MIT AND ISC"
+license-files = ["LICENSE"]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -64,7 +65,7 @@ cpu = ["torch", "torchaudio; python_version < '3.15'"]
 gpu = ["torch", "torchaudio; python_version < '3.15'"]
 
 [project.urls]
-Source = "https://github.com/takenori-y/pitch-garden"
+Source = "https://github.com/sp-nitech/pitch-garden"
 
 [project.scripts]
 pitch-garden = "pitch_garden.cli:main"

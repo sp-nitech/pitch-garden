@@ -18,7 +18,7 @@ def get_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
         description=(
             "Track pitch with multiple algorithms and vote their outputs. "
             "The settings are given by a YAML file; see the examples in "
-            "https://github.com/takenori-y/pitch-garden/tree/master/configs."
+            "https://github.com/sp-nitech/pitch-garden/tree/master/configs."
         )
     )
     parser.add_argument("config", type=str, help="The YAML configuration file.")

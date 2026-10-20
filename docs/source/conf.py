@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "pitch-garden"
-copyright = "2026, Takenori Yoshimura"
+copyright = "2026, Nagoya Institute of Technology"
 author = "Takenori Yoshimura"
 exec(open("../../pitch_garden/version.py").read())
 release = __version__
@@ -36,13 +36,13 @@ html_theme_options = {
         "text": project,
     },
     "switcher": {
-        "json_url": f"https://takenori-y.github.io/{project}/switcher.json",
+        "json_url": f"https://sp-nitech.github.io/{project}/switcher.json",
         "version_match": "latest" if "dev" in release else release,
     },
     "icon_links": [
         {
             "name": "GitHub",
-            "url": f"https://github.com/takenori-y/{project}/",
+            "url": f"https://github.com/sp-nitech/{project}/",
             "icon": "fab fa-github-square",
         },
         {
